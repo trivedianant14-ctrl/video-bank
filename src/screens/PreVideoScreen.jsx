@@ -190,7 +190,7 @@ export default function PreVideoScreen({
 
         {/* Download button (mirrors Back button width to keep title centred) */}
         <button
-          onClick={() => setShowDownloadSheet(true)}
+          onClick={() => navigate('downloads')}
           aria-label="Download videos"
           style={{ width: 60, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0 4px 8px' }}
         >

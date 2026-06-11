@@ -42,6 +42,7 @@ const QUIZ_QUESTIONS = [
       'The Bundle of His is a conduction pathway that carries impulses from the AV node to the ventricles. It doesn\'t generate rhythm on its own.',
       'Purkinje fibers distribute impulses to ventricular muscle. Their intrinsic escape rate is only 20–40 bpm — a last-resort backup, not a pacemaker.',
     ],
+    optPcts: [20, 62, 12, 6],
   },
   {
     text: 'The mitral valve separates which two chambers?',
@@ -54,6 +55,7 @@ const QUIZ_QUESTIONS = [
       'That junction is guarded by the aortic (semilunar) valve, which controls blood leaving the left ventricle into the aorta.',
       'That junction is controlled by the pulmonary valve, which regulates blood flowing from the right ventricle into the pulmonary artery.',
     ],
+    optPcts: [8, 78, 9, 5],
   },
   {
     text: 'Which layer of the heart wall is responsible for contraction?',
@@ -66,6 +68,7 @@ const QUIZ_QUESTIONS = [
       'Correct. The myocardium is the thick muscular middle layer. Its specialised cardiac muscle cells contract in a coordinated wave to pump blood.',
       'The endocardium is the smooth inner lining of the heart chambers. It reduces friction as blood flows through — it has no contractile function.',
     ],
+    optPcts: [14, 4, 71, 11],
   },
   {
     text: 'Absent P waves with an irregularly irregular R-R interval most likely indicates:',
@@ -78,6 +81,7 @@ const QUIZ_QUESTIONS = [
       'Third-degree (complete) heart block shows regular P waves and regular QRS complexes — but they\'re dissociated from each other. Both intervals are regular, not irregular.',
       'Sinus tachycardia has normal, regular P waves before every QRS and a consistently fast but regular rate. The R-R interval is uniform.',
     ],
+    optPcts: [18, 52, 22, 8],
   },
 ]
 
@@ -97,6 +101,31 @@ const Toggle = ({ value, onChange }) => (
     }} />
   </div>
 )
+
+function QuizTimerRing({ timeLeft }) {
+  const r = 12, size = 34, cx = 17
+  const circumference = 2 * Math.PI * r
+  const dashOffset = circumference * (1 - timeLeft / 60)
+  const urgent = timeLeft <= 10
+  const color = urgent ? '#A32D2D' : P
+  const trackColor = urgent ? '#FCEBEB' : PL
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={cx} cy={cx} r={r} fill="none" stroke={trackColor} strokeWidth="3" />
+        <circle cx={cx} cy={cx} r={r} fill="none" stroke={color} strokeWidth="3"
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={dashOffset}
+          strokeLinecap="round"
+          style={{ transform: 'rotate(-90deg)', transformOrigin: `${cx}px ${cx}px`, transition: 'stroke-dashoffset 0.9s linear, stroke 0.3s' }}
+        />
+      </svg>
+      <span style={{ fontSize: 11, fontWeight: 700, color, minWidth: 22 }}>
+        {String(Math.floor(timeLeft / 60)).padStart(2,'0')}:{String(timeLeft % 60).padStart(2,'0')}
+      </span>
+    </div>
+  )
+}
 
 export default function VideoPlayer({
   navigate, currentVideo,
@@ -155,6 +184,7 @@ export default function VideoPlayer({
   const [quizQIndex, setQuizQIndex] = useState(0)
   const [quizAnswers, setQuizAnswers] = useState({})
   const [quizPhase, setQuizPhase] = useState('questions')
+  const [quizTimeLeft, setQuizTimeLeft] = useState(60)
   const [savedQuestions, setSavedQuestions] = useState(new Set())
   const [questionTags, setQuestionTags] = useState({})
   const [showMarkMenu, setShowMarkMenu] = useState(false)
@@ -211,6 +241,15 @@ export default function VideoPlayer({
     const t = setTimeout(() => setShowDoubtToast(false), 3000)
     return () => clearTimeout(t)
   }, [showDoubtToast])
+
+  // Quiz per-question countdown timer
+  useEffect(() => {
+    if (phase !== 'quiz' || quizPhase !== 'questions') return
+    if (quizAnswers[quizQIndex] !== undefined) return
+    setQuizTimeLeft(60)
+    const t = setInterval(() => setQuizTimeLeft(p => (p <= 1 ? 0 : p - 1)), 1000)
+    return () => clearInterval(t)
+  }, [phase, quizQIndex, quizPhase, quizAnswers])
 
   const handleSelfNotesChange = (val) => {
     setSelfNotes(val)
@@ -337,9 +376,10 @@ export default function VideoPlayer({
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg>
           </button>
-          <span style={{ fontSize: 15, fontWeight: 700, color: text1, flex: 1 }}>Quick Check</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: text1, flex: 1 }}>Quick Test</span>
           {quizPhase === 'questions' && (
             <>
+              {quizAnswers[quizQIndex] === undefined && <QuizTimerRing timeLeft={quizTimeLeft} />}
               <button
                 onClick={() => setSavedQuestions(prev => { const s = new Set(prev); s.has(quizQIndex) ? s.delete(quizQIndex) : s.add(quizQIndex); return s })}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}
@@ -348,7 +388,6 @@ export default function VideoPlayer({
                   <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
                 </svg>
               </button>
-              <span style={{ fontSize: 12, color: text3 }}>{quizQIndex + 1} / {QUIZ_QUESTIONS.length}</span>
             </>
           )}
         </div>
@@ -356,10 +395,22 @@ export default function VideoPlayer({
         <div className="scroll" style={{ flex: 1, overflowY: 'auto', padding: '20px 16px' }}>
           {quizPhase === 'questions' ? (
             <>
-              <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
-                {QUIZ_QUESTIONS.map((_, i) => (
-                  <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= quizQIndex ? P : borderClr, opacity: i < quizQIndex ? 0.4 : 1 }} />
-                ))}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 20 }}>
+                {QUIZ_QUESTIONS.map((_, i) => {
+                  const ans = quizAnswers[i]
+                  let dotBg = i === quizQIndex ? PL : (darkMode ? '#1e1e30' : BG2)
+                  let dotBorder = i === quizQIndex ? P : borderClr
+                  let dotColor = i === quizQIndex ? P : text3
+                  if (ans !== undefined) {
+                    if (ans === QUIZ_QUESTIONS[i].correct) { dotBg = '#EAF3DE'; dotBorder = '#97C459'; dotColor = '#27500A' }
+                    else { dotBg = '#FCEBEB'; dotBorder = '#F09595'; dotColor = '#791F1F' }
+                  }
+                  return (
+                    <div key={i} style={{ width: 34, height: 34, borderRadius: '50%', border: `1.5px solid ${dotBorder}`, background: dotBg, color: dotColor, fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {i + 1}
+                    </div>
+                  )
+                })}
               </div>
 
               <div style={{ fontSize: 15, fontWeight: 600, color: text1, lineHeight: 1.6, marginBottom: 20 }}>
@@ -411,12 +462,17 @@ export default function VideoPlayer({
                       }}>
                         {['A', 'B', 'C', 'D'][i]}
                       </span>
-                      {opt}
+                      <span style={{ flex: 1 }}>{opt}</span>
+                      {hasAnswered && (
+                        <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.65, flexShrink: 0, color: optColor }}>
+                          {currentQuizQ.optPcts?.[i]}%
+                        </span>
+                      )}
                       {hasAnswered && isCorrect && (
-                        <svg style={{ marginLeft: 'auto', flexShrink: 0 }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg>
+                        <svg style={{ flexShrink: 0 }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg>
                       )}
                       {hasAnswered && selected && !isCorrect && (
-                        <svg style={{ marginLeft: 'auto', flexShrink: 0 }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#791F1F" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        <svg style={{ flexShrink: 0 }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#791F1F" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                       )}
                     </button>
                     {/* Per-option explanation */}
@@ -674,7 +730,7 @@ export default function VideoPlayer({
           pointerEvents: showControls ? 'auto' : 'none',
         }}>
           <button
-            onClick={e => { e.stopPropagation(); navigate('home') }}
+            onClick={e => { e.stopPropagation(); navigate('prevideoscreen') }}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'white', display: 'flex', padding: 4 }}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg>
@@ -797,40 +853,37 @@ export default function VideoPlayer({
               gap: 10, zIndex: 20, padding: '0 28px',
             }}
           >
-            <div style={{ fontSize: 26, marginBottom: 2 }}>🎬</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'white', textAlign: 'center' }}>
-              {displayProgress >= COMPLETION_THRESHOLD ? 'Great watch!' : 'Taking a break?'}
-            </div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.62)', textAlign: 'center', lineHeight: 1.55, marginBottom: 4 }}>
-              Want to test what you just learned?
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.45)', marginBottom: 10, textTransform: 'uppercase' }}>
+              Up Next
             </div>
 
-            {/* Returning user: show previous score */}
-            {isReturningUser && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.1)', borderRadius: 50, padding: '5px 16px', marginBottom: 2 }}>
-                <span style={{ fontSize: 14, fontWeight: 800, color: '#97C459' }}>{MOCK_PREV_SCORE}/{QUIZ_QUESTIONS.length}</span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>last time · {MOCK_PREV_DATE}</span>
+            {/* Next video card */}
+            <div style={{ width: '100%', maxWidth: 280, background: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: '10px', marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ width: 64, height: 46, background: 'rgba(255,255,255,0.07)', borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,0.4)"><polygon points="5,3 19,12 5,21"/></svg>
               </div>
-            )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'white', lineHeight: 1.35, marginBottom: 3 }}>Cardiovascular System — Part 2</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>Applied Anatomy · 14 min</div>
+              </div>
+            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 290, marginTop: 6 }}>
-              {/* Practice */}
-              <button
-                onClick={() => { setShowCompletionOverlay(false); setQuizQIndex(0); setQuizAnswers({}); setQuizPhase('questions'); setPhase('quiz') }}
-                style={{ width: '100%', padding: '12px', borderRadius: 50, background: P, border: 'none', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-              >
-                🎯 Practice this topic
-              </button>
-
-              {/* Continue with countdown */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 280 }}>
               <button
                 onClick={() => { setShowCompletionOverlay(false); navigate('prevideoscreen') }}
-                style={{ width: '100%', padding: '12px', borderRadius: 50, background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+                style={{ width: '100%', padding: '12px 16px', borderRadius: 50, background: 'white', border: 'none', color: T1, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
               >
-                Continue to next video
-                <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(255,255,255,0.15)', borderRadius: 50, padding: '2px 9px', color: 'rgba(255,255,255,0.75)' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill={P}><polygon points="5,3 19,12 5,21"/></svg>
+                Starting next video
+                <span style={{ fontSize: 11, fontWeight: 700, background: P, borderRadius: 50, padding: '2px 9px', color: 'white' }}>
                   {countdown}s
                 </span>
+              </button>
+              <button
+                onClick={() => { setShowCompletionOverlay(false); setQuizQIndex(0); setQuizAnswers({}); setQuizPhase('questions'); setPhase('quiz') }}
+                style={{ width: '100%', padding: '12px', borderRadius: 50, background: 'transparent', border: '1.5px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                🎯 Practice this topic first
               </button>
             </div>
           </div>
@@ -1023,12 +1076,6 @@ export default function VideoPlayer({
               }}
             >
               {tab.label}
-              {tab.id === 'practice' && (
-                <span style={{
-                  position: 'absolute', top: 8, right: '50%', transform: 'translateX(18px)',
-                  width: 6, height: 6, borderRadius: '50%', background: '#C05C0D',
-                }} />
-              )}
             </button>
           ))}
         </div>

@@ -3,11 +3,13 @@ import VideoHome from './screens/VideoHome'
 import PreVideoScreen from './screens/PreVideoScreen'
 import VideoPlayer from './screens/VideoPlayer'
 import Saved from './screens/Saved'
+import Downloads from './screens/Downloads'
 import { SCENARIO_NEW, SCENARIO_RETURNING_A, SCENARIO_RETURNING_B } from './data/subjects'
 
 const SCREEN_DEPTH = {
   home: 0,
   saved: 1,
+  downloads: 1,
   prevideoscreen: 1,
   videoplayer: 2,
 }
@@ -94,6 +96,10 @@ export default function App() {
             savedResources={savedResources}
             unsaveResource={unsaveResource}
           />
+        )}
+
+        {screen === 'downloads' && (
+          <Downloads navigate={goTo} />
         )}
 
       </div>

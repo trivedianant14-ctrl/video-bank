@@ -215,7 +215,7 @@ export default function VideoHome({
               display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <IconSearch color={T2}/>
             </button>
-            <button onClick={() => setShowDownloadSheet(true)}
+            <button onClick={() => navigate('downloads')}
               style={{ width: 36, height: 36, borderRadius: 50, border: 'none', background: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               aria-label="Download videos">
