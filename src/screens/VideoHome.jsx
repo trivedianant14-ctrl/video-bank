@@ -34,7 +34,7 @@ const SUBJECTS = [
   },
 ]
 
-export default function VideoHome({ navigate, setCurrentVideo, savedVideos }) {
+export default function VideoHome({ navigate, setCurrentVideo, savedVideos, isReturningUser, setIsReturningUser }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'white' }}>
 
@@ -62,6 +62,42 @@ export default function VideoHome({ navigate, setCurrentVideo, savedVideos }) {
           </svg>
           <span style={{ fontSize: 9, fontWeight: 600, color: savedVideos.length > 0 ? P : T3 }}>Saved</span>
         </button>
+      </div>
+
+      {/* Prototype: user-type toggle */}
+      <div style={{ padding: '8px 16px', background: '#F8F7FF', borderBottom: `1px solid ${BD}`, display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        <span style={{ fontSize: 11, color: T3, fontWeight: 600, flexShrink: 0 }}>Viewing as:</span>
+        <div style={{ display: 'flex', background: BD, borderRadius: 50, padding: 3, gap: 2 }}>
+          <button
+            onClick={() => setIsReturningUser(false)}
+            style={{
+              padding: '5px 12px', borderRadius: 50, border: 'none', cursor: 'pointer',
+              fontSize: 11, fontWeight: 600,
+              background: !isReturningUser ? 'white' : 'transparent',
+              color: !isReturningUser ? T1 : T3,
+              boxShadow: !isReturningUser ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+              transition: 'all 0.15s',
+            }}
+          >
+            New student
+          </button>
+          <button
+            onClick={() => setIsReturningUser(true)}
+            style={{
+              padding: '5px 12px', borderRadius: 50, border: 'none', cursor: 'pointer',
+              fontSize: 11, fontWeight: 600,
+              background: isReturningUser ? 'white' : 'transparent',
+              color: isReturningUser ? P : T3,
+              boxShadow: isReturningUser ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+              transition: 'all 0.15s',
+            }}
+          >
+            Returning student
+          </button>
+        </div>
+        {isReturningUser && (
+          <span style={{ fontSize: 10, color: P, fontWeight: 600, background: PL, padding: '2px 7px', borderRadius: 50 }}>Rewatching</span>
+        )}
       </div>
 
       {/* Video list */}

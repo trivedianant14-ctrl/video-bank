@@ -14,6 +14,7 @@ export default function App() {
   const [currentVideo, setCurrentVideo] = useState(null)
   const [savedVideos, setSavedVideos] = useState([])
   const [savedResources, setSavedResources] = useState([])
+  const [isReturningUser, setIsReturningUser] = useState(false)
   const animDirRef = useRef('forward')
 
   const goTo = (next) => {
@@ -40,6 +41,8 @@ export default function App() {
             navigate={goTo}
             setCurrentVideo={setCurrentVideo}
             savedVideos={savedVideos}
+            isReturningUser={isReturningUser}
+            setIsReturningUser={setIsReturningUser}
           />
         )}
         {screen === 'videoplayer' && (
@@ -52,6 +55,7 @@ export default function App() {
             savedResources={savedResources}
             saveResource={saveResource}
             unsaveResource={unsaveResource}
+            isReturningUser={isReturningUser}
           />
         )}
         {screen === 'saved' && (

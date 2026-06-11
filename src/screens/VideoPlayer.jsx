@@ -8,6 +8,11 @@ const P = '#534AB7', PL = '#EEEDFE', PD = '#3C3489'
 const T1 = '#1a1a2e', T2 = '#5a5a78', T3 = '#9898b0', BD = '#e8e8f2', BG2 = '#f5f5fb'
 const GREEN = '#3B6D11', GREENBG = '#EAF3DE', GREENBORDER = '#A5D6A7'
 
+// Mock data for returning-user view
+const MOCK_PREV_SCORE = 3
+const MOCK_PREV_DATE = 'Jan 12, 2025'
+const MOCK_PREV_ANSWERS = { 0: 2, 1: 1, 2: 2, 3: 1 } // Q1 wrong (Bundle of His), Q2-Q4 correct
+
 const TOPICS_COVERED = [
   { name: 'Introduction & Overview', ts: '0:00' },
   { name: 'Cardiac Anatomy', ts: '2:45' },
@@ -88,6 +93,7 @@ export default function VideoPlayer({
   navigate, currentVideo,
   savedVideos = [], saveVideo, unsaveVideo,
   savedResources = [], saveResource, unsaveResource,
+  isReturningUser = false,
 }) {
   const [phase, setPhase] = useState('player')
   const [isPlaying, setIsPlaying] = useState(false)
@@ -137,6 +143,7 @@ export default function VideoPlayer({
   const [showMarkMenu, setShowMarkMenu] = useState(false)
   const [showImageViewer, setShowImageViewer] = useState(null)
   const [expandedResult, setExpandedResult] = useState(null)
+  const [expandedPractice, setExpandedPractice] = useState(null)
 
   const bg = darkMode ? '#0d0d1a' : 'white'
   const cardBg = darkMode ? '#1e1e30' : BG2
@@ -173,13 +180,13 @@ export default function VideoPlayer({
     return () => clearInterval(t)
   }, [isPlaying])
 
-  // Completion countdown → auto-advance to quiz
+  // Completion countdown → auto-advance to quiz (new users only)
   useEffect(() => {
-    if (!showCompletionOverlay) return
+    if (!showCompletionOverlay || isReturningUser) return
     if (countdown <= 0) { setShowCompletionOverlay(false); setPhase('quiz'); return }
     const t = setTimeout(() => setCountdown(c => c - 1), 1000)
     return () => clearTimeout(t)
-  }, [showCompletionOverlay, countdown])
+  }, [showCompletionOverlay, countdown, isReturningUser])
 
   // Doubt toast auto-dismiss
   useEffect(() => {
@@ -730,17 +737,50 @@ export default function VideoPlayer({
             style={{
               position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.88)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              gap: 10, zIndex: 20,
+              gap: 10, zIndex: 20, padding: '0 24px',
             }}
           >
-            <div style={{ fontSize: 15, fontWeight: 600, color: 'white', textAlign: 'center' }}>Done with this one. Nice.</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>Quick check coming up in {countdown}…</div>
-            <button
-              onClick={() => { setShowCompletionOverlay(false); setPhase('quiz') }}
-              style={{ marginTop: 6, padding: '9px 22px', borderRadius: 50, background: P, border: 'none', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-            >
-              Continue now
-            </button>
+            {isReturningUser ? (
+              /* ── RETURNING USER overlay ── */
+              <>
+                <div style={{ fontSize: 24, marginBottom: 2 }}>👋</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'white', textAlign: 'center' }}>You've watched this one before.</div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center', lineHeight: 1.5 }}>Want to practice the questions again?</div>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8, marginTop: 4,
+                  background: 'rgba(255,255,255,0.1)', borderRadius: 50, padding: '7px 18px',
+                }}>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: '#97C459' }}>{MOCK_PREV_SCORE}</span>
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>/ {QUIZ_QUESTIONS.length} last time · {MOCK_PREV_DATE}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8, width: '100%', maxWidth: 280 }}>
+                  <button
+                    onClick={() => { setShowCompletionOverlay(false); setPhase('quiz') }}
+                    style={{ padding: '11px', borderRadius: 50, background: P, border: 'none', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', width: '100%' }}
+                  >
+                    Retake Quick Check
+                  </button>
+                  <button
+                    onClick={() => { setShowCompletionOverlay(false); navigate('home') }}
+                    style={{ padding: '11px', borderRadius: 50, background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%' }}
+                  >
+                    Continue to next video
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* ── NEW USER overlay ── */
+              <>
+                <div style={{ fontSize: 15, fontWeight: 600, color: 'white', textAlign: 'center' }}>Done with this one. Nice.</div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>Quick check coming up in {countdown}…</div>
+                <button
+                  onClick={() => { setShowCompletionOverlay(false); setPhase('quiz') }}
+                  style={{ marginTop: 6, padding: '9px 22px', borderRadius: 50, background: P, border: 'none', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Continue now
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -826,22 +866,30 @@ export default function VideoPlayer({
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: `1px solid ${borderClr}` }}>
           {[
-            { id: 'topics', label: 'Topics Covered' },
+            { id: 'topics',    label: isReturningUser ? 'Topics' : 'Topics Covered' },
             { id: 'resources', label: 'Resources' },
-            { id: 'selfnotes', label: 'Self-Notes' },
+            { id: 'selfnotes', label: isReturningUser ? 'Notes' : 'Self-Notes' },
+            ...(isReturningUser ? [{ id: 'practice', label: 'Practice' }] : []),
           ].map(tab => (
             <button
               key={tab.id} onClick={() => setActiveTab(tab.id)}
               style={{
-                flex: 1, padding: '11px 4px', fontSize: 12,
+                flex: 1, padding: '11px 2px', fontSize: isReturningUser ? 11 : 12,
                 fontWeight: activeTab === tab.id ? 700 : 500,
-                color: activeTab === tab.id ? P : text3,
+                color: activeTab === tab.id ? (tab.id === 'practice' ? '#C05C0D' : P) : text3,
                 background: 'none', border: 'none',
-                borderBottom: `2.5px solid ${activeTab === tab.id ? P : 'transparent'}`,
+                borderBottom: `2.5px solid ${activeTab === tab.id ? (tab.id === 'practice' ? '#C05C0D' : P) : 'transparent'}`,
                 cursor: 'pointer', transition: 'all 0.15s',
+                position: 'relative',
               }}
             >
               {tab.label}
+              {tab.id === 'practice' && (
+                <span style={{
+                  position: 'absolute', top: 8, right: '50%', transform: 'translateX(18px)',
+                  width: 6, height: 6, borderRadius: '50%', background: '#C05C0D',
+                }} />
+              )}
             </button>
           ))}
         </div>
@@ -950,6 +998,86 @@ export default function VideoPlayer({
                   <span>Record voice</span>
                 </button>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'practice' && isReturningUser && (
+            <div>
+              {/* Previous attempt summary */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, background: '#FFF8F0', border: '1.5px solid #F0C080', marginBottom: 14 }}>
+                <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#C05C0D' }}>{MOCK_PREV_SCORE}/{QUIZ_QUESTIONS.length}</div>
+                  <div style={{ fontSize: 9, color: '#C05C0D', fontWeight: 600 }}>LAST SCORE</div>
+                </div>
+                <div style={{ width: 1, height: 32, background: '#F0C080' }} />
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#633806' }}>Previous attempt</div>
+                  <div style={{ fontSize: 11, color: '#C05C0D', marginTop: 1 }}>{MOCK_PREV_DATE} · {QUIZ_QUESTIONS.length} questions</div>
+                </div>
+                <button
+                  onClick={() => { setQuizQIndex(0); setQuizAnswers({}); setQuizPhase('questions'); setPhase('quiz') }}
+                  style={{ marginLeft: 'auto', padding: '7px 14px', borderRadius: 50, background: '#C05C0D', border: 'none', color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                >
+                  Retake
+                </button>
+              </div>
+
+              {/* Question review accordion */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Review last attempt</div>
+              {QUIZ_QUESTIONS.map((q, i) => {
+                const correct = MOCK_PREV_ANSWERS[i] === q.correct
+                const isOpen = expandedPractice === i
+                const accentColor = correct ? '#3B6D11' : '#791F1F'
+                const accentBg = correct ? '#EAF3DE' : '#FCEBEB'
+                const accentBorder = correct ? '#97C459' : '#F09595'
+                const accentBorderLight = correct ? '#c7e8a0' : '#f8bfbf'
+                return (
+                  <div key={i} style={{ marginBottom: 8, borderRadius: 12, overflow: 'hidden', border: `1px solid ${accentBorder}` }}>
+                    <button
+                      onClick={() => setExpandedPractice(isOpen ? null : i)}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: accentBg, border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      <span style={{ fontSize: 12, color: accentColor, flex: 1, lineHeight: 1.4, fontWeight: 500 }}>Q{i + 1}: {q.text}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: accentColor, flexShrink: 0 }}>{correct ? '✓' : '✗'}</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                        <polyline points="6,9 12,15 18,9"/>
+                      </svg>
+                    </button>
+                    {isOpen && (
+                      <div style={{ background: 'white', padding: '12px 14px 14px', borderTop: `1px solid ${accentBorderLight}` }}>
+                        {q.options.map((opt, j) => {
+                          const isCorrectOpt = j === q.correct
+                          const wasSelected = MOCK_PREV_ANSWERS[i] === j
+                          let bg = BG2, border = borderClr, color = text2
+                          if (isCorrectOpt) { bg = '#EAF3DE'; border = '#97C459'; color = '#3B6D11' }
+                          else if (wasSelected) { bg = '#FCEBEB'; border = '#F09595'; color = '#791F1F' }
+                          return (
+                            <div key={j} style={{ marginBottom: 6 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: q.optionExplanations ? '8px 8px 0 0' : 8, background: bg, border: `1px solid ${border}`, borderBottom: q.optionExplanations ? 'none' : `1px solid ${border}` }}>
+                                <span style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isCorrectOpt ? '#3B6D11' : wasSelected ? '#791F1F' : 'transparent', border: `1.5px solid ${border}`, color: (isCorrectOpt || wasSelected) ? 'white' : color }}>
+                                  {['A', 'B', 'C', 'D'][j]}
+                                </span>
+                                <span style={{ fontSize: 12, color, fontWeight: isCorrectOpt || wasSelected ? 600 : 400, flex: 1 }}>{opt}</span>
+                                {isCorrectOpt && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg>}
+                                {wasSelected && !isCorrectOpt && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#791F1F" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>}
+                              </div>
+                              {q.optionExplanations?.[j] && (
+                                <div style={{ padding: '7px 12px 9px', fontSize: 11, lineHeight: 1.6, borderRadius: '0 0 8px 8px', border: `1px solid ${border}`, borderTop: `1px dashed ${border}`, background: isCorrectOpt ? '#f2fae8' : wasSelected ? '#fff5f5' : '#fafafa', color: isCorrectOpt ? '#3B6D11' : wasSelected ? '#791F1F' : T3 }}>
+                                  {q.optionExplanations[j]}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                        <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, background: '#EAF3DE', border: '1px solid #97C459' }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#3B6D11', marginBottom: 3 }}>Key takeaway</div>
+                          <div style={{ fontSize: 12, color: '#3B6D11', lineHeight: 1.6 }}>{q.explanation}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
 
