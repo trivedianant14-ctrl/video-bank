@@ -719,7 +719,26 @@ export default function VideoPlayer({
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0 12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+                <button
+                  onClick={() => { if (notesTimerRef.current) clearTimeout(notesTimerRef.current); setNotesSaved(true) }}
+                  disabled={!selfNotes.trim()}
+                  style={{
+                    padding: '9px 20px', borderRadius: 50,
+                    background: notesSaved ? GREENBG : selfNotes.trim() ? P : borderClr,
+                    border: `1.5px solid ${notesSaved ? GREENBORDER : selfNotes.trim() ? P : borderClr}`,
+                    color: notesSaved ? GREEN : selfNotes.trim() ? 'white' : text3,
+                    fontSize: 13, fontWeight: 600, cursor: selfNotes.trim() ? 'pointer' : 'default',
+                    display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s',
+                  }}
+                >
+                  {notesSaved
+                    ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg> Saved</>
+                    : 'Save notes'}
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0 0 12px' }}>
                 <div style={{ flex: 1, height: 1, background: borderClr }} />
                 <span style={{ fontSize: 11, color: text3, fontWeight: 600 }}>OR</span>
                 <div style={{ flex: 1, height: 1, background: borderClr }} />
