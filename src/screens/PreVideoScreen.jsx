@@ -188,18 +188,29 @@ export default function PreVideoScreen({
           </button>
         </div>
 
-        {/* Download button (mirrors Back button width to keep title centred) */}
-        <button
-          onClick={() => navigate('downloads')}
-          aria-label="Download videos"
-          style={{ width: 60, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0 4px 8px' }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T2} strokeWidth="2.2" strokeLinecap="round">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-            <polyline points="7,10 12,15 17,10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-        </button>
+        {/* Right icons: saved + download (match Back width so title stays centred) */}
+        <div style={{ display: 'flex', gap: 0, alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0, minWidth: 72 }}>
+          <button
+            onClick={() => navigate('saved')}
+            aria-label="Saved items"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', display: 'flex', color: T2 }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
+            </svg>
+          </button>
+          <button
+            onClick={() => navigate('downloads')}
+            aria-label="Download videos"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', display: 'flex', color: T2 }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="7,10 12,15 17,10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* ── Scrollable body ──────────────────────────────────────────────── */}

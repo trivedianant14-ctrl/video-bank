@@ -95,6 +95,7 @@ export default function App() {
             unsaveVideo={unsaveVideo}
             savedResources={savedResources}
             unsaveResource={unsaveResource}
+            isReturningUser={isReturningUser}
           />
         )}
 
