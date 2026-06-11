@@ -1,40 +1,17 @@
-const P = '#534AB7', PL = '#EEEDFE', PD = '#3C3489'
+import { SUBJECTS } from '../data/subjects'
+
+const P = '#534AB7', PL = '#EEEDFE'
 const T1 = '#1a1a2e', T2 = '#5a5a78', T3 = '#9898b0', BD = '#e8e8f2', BG2 = '#f5f5fb'
+const GREEN = '#3B6D11', GREENBG = '#EAF3DE'
 
-const SUBJECTS = [
-  {
-    id: 'anatomy',
-    name: 'Applied Anatomy',
-    color: '#534AB7',
-    bg: '#EEEDFE',
-    videos: [
-      { id: 'cv-part1', title: 'Cardiovascular System — Part 1', uploadDate: 'Jan 12, 2025', duration: '12:00', subject: 'Applied Anatomy' },
-      { id: 'cv-part2', title: 'Cardiovascular System — Part 2', uploadDate: 'Jan 15, 2025', duration: '10:30', subject: 'Applied Anatomy' },
-      { id: 'renal-part1', title: 'Renal System — Part 1', uploadDate: 'Jan 20, 2025', duration: '14:15', subject: 'Applied Anatomy' },
-    ],
-  },
-  {
-    id: 'physiology',
-    name: 'Physiology',
-    color: '#1B7F4F',
-    bg: '#E6F7EF',
-    videos: [
-      { id: 'resp-part1', title: 'Respiratory Physiology — Part 1', uploadDate: 'Feb 3, 2025', duration: '11:45', subject: 'Physiology' },
-      { id: 'neuro-part1', title: 'Neurophysiology — Basics', uploadDate: 'Feb 10, 2025', duration: '9:20', subject: 'Physiology' },
-    ],
-  },
-  {
-    id: 'pharmacology',
-    name: 'Pharmacology',
-    color: '#C0500D',
-    bg: '#FFF0E6',
-    videos: [
-      { id: 'pharm-part1', title: 'Drug Absorption & Distribution', uploadDate: 'Mar 1, 2025', duration: '13:00', subject: 'Pharmacology' },
-    ],
-  },
-]
-
-export default function VideoHome({ navigate, setCurrentVideo, savedVideos, isReturningUser, setIsReturningUser }) {
+export default function VideoHome({
+  navigate,
+  setCurrentSubject,
+  savedVideos = [],
+  isReturningUser, setIsReturningUser,
+  isFreeTier, setIsFreeTier,
+  videoProgress = {},
+}) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'white' }}>
 
@@ -64,107 +41,119 @@ export default function VideoHome({ navigate, setCurrentVideo, savedVideos, isRe
         </button>
       </div>
 
-      {/* Prototype: user-type toggle */}
-      <div style={{ padding: '8px 16px', background: '#F8F7FF', borderBottom: `1px solid ${BD}`, display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-        <span style={{ fontSize: 11, color: T3, fontWeight: 600, flexShrink: 0 }}>Viewing as:</span>
-        <div style={{ display: 'flex', background: BD, borderRadius: 50, padding: 3, gap: 2 }}>
-          <button
-            onClick={() => setIsReturningUser(false)}
-            style={{
-              padding: '5px 12px', borderRadius: 50, border: 'none', cursor: 'pointer',
-              fontSize: 11, fontWeight: 600,
-              background: !isReturningUser ? 'white' : 'transparent',
-              color: !isReturningUser ? T1 : T3,
-              boxShadow: !isReturningUser ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-              transition: 'all 0.15s',
-            }}
-          >
-            New student
-          </button>
-          <button
-            onClick={() => setIsReturningUser(true)}
-            style={{
-              padding: '5px 12px', borderRadius: 50, border: 'none', cursor: 'pointer',
-              fontSize: 11, fontWeight: 600,
-              background: isReturningUser ? 'white' : 'transparent',
-              color: isReturningUser ? P : T3,
-              boxShadow: isReturningUser ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-              transition: 'all 0.15s',
-            }}
-          >
-            Returning student
-          </button>
-        </div>
-        {isReturningUser && (
-          <span style={{ fontSize: 10, color: P, fontWeight: 600, background: PL, padding: '2px 7px', borderRadius: 50 }}>Rewatching</span>
-        )}
-      </div>
-
-      {/* Video list */}
-      <div className="scroll" style={{ flex: 1, overflowY: 'auto' }}>
-        {SUBJECTS.map(subject => (
-          <div key={subject.id} style={{ marginBottom: 4 }}>
-            {/* Subject heading */}
-            <div style={{ padding: '14px 16px 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: subject.color, flexShrink: 0 }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: subject.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {subject.name}
-              </span>
-              <span style={{ fontSize: 11, color: T3 }}>{subject.videos.length} videos</span>
-            </div>
-
-            {/* Video cards */}
-            {subject.videos.map((video, i) => (
+      {/* Prototype toggles */}
+      <div style={{ padding: '8px 16px', background: '#F8F7FF', borderBottom: `1px solid ${BD}`, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', flexShrink: 0 }}>
+        {/* New / Returning toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 10, color: T3, fontWeight: 600 }}>User:</span>
+          <div style={{ display: 'flex', background: BD, borderRadius: 50, padding: 2, gap: 1 }}>
+            {[{ val: false, label: 'New' }, { val: true, label: 'Returning' }].map(o => (
               <button
-                key={video.id}
-                onClick={() => { setCurrentVideo(video); navigate('videoplayer') }}
+                key={String(o.val)}
+                onClick={() => setIsReturningUser(o.val)}
                 style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '12px 16px', background: 'none', border: 'none', cursor: 'pointer',
-                  borderBottom: i < subject.videos.length - 1 ? `1px solid ${BG2}` : 'none',
-                  textAlign: 'left',
+                  padding: '4px 10px', borderRadius: 50, border: 'none', cursor: 'pointer',
+                  fontSize: 10, fontWeight: 600,
+                  background: isReturningUser === o.val ? 'white' : 'transparent',
+                  color: isReturningUser === o.val ? (o.val ? P : T1) : T3,
+                  boxShadow: isReturningUser === o.val ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                  transition: 'all 0.15s',
                 }}
               >
-                {/* Thumbnail */}
-                <div style={{
-                  width: 72, height: 48, borderRadius: 8, background: subject.bg,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0, position: 'relative', overflow: 'hidden',
-                }}>
-                  <div style={{
-                    position: 'absolute', inset: 0,
-                    background: `linear-gradient(135deg, ${subject.bg} 0%, ${subject.color}22 100%)`,
-                  }} />
-                  <div style={{
-                    width: 22, height: 22, borderRadius: '50%', background: subject.color,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
-                  }}>
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 1 }}><polygon points="5,3 19,12 5,21"/></svg>
-                  </div>
-                  <div style={{
-                    position: 'absolute', bottom: 4, right: 5, fontSize: 9, fontWeight: 700,
-                    color: subject.color, background: 'white', padding: '1px 4px', borderRadius: 3,
-                  }}>
-                    {video.duration}
-                  </div>
-                </div>
-
-                {/* Meta */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: T1, lineHeight: 1.4, marginBottom: 3 }}>
-                    {video.title}
-                  </div>
-                  <div style={{ fontSize: 11, color: T3 }}>Uploaded {video.uploadDate}</div>
-                </div>
-
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}>
-                  <path d="M9 18l6-6-6-6"/>
-                </svg>
+                {o.label}
               </button>
             ))}
           </div>
-        ))}
-        <div style={{ height: 24 }} />
+        </div>
+
+        {/* Free / Paid toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 10, color: T3, fontWeight: 600 }}>Plan:</span>
+          <div style={{ display: 'flex', background: BD, borderRadius: 50, padding: 2, gap: 1 }}>
+            {[{ val: false, label: 'Paid' }, { val: true, label: 'Free' }].map(o => (
+              <button
+                key={String(o.val)}
+                onClick={() => setIsFreeTier(o.val)}
+                style={{
+                  padding: '4px 10px', borderRadius: 50, border: 'none', cursor: 'pointer',
+                  fontSize: 10, fontWeight: 600,
+                  background: isFreeTier === o.val ? 'white' : 'transparent',
+                  color: isFreeTier === o.val ? (o.val ? '#C05C0D' : T1) : T3,
+                  boxShadow: isFreeTier === o.val ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Subject cards */}
+      <div className="scroll" style={{ flex: 1, overflowY: 'auto', padding: '12px 16px' }}>
+        {SUBJECTS.map(subject => {
+          const completedCount = subject.videos.filter(v => videoProgress[v.id]?.completed).length
+          const inProgressCount = subject.videos.filter(v => !videoProgress[v.id]?.completed && videoProgress[v.id]?.secondsWatched > 0).length
+          const allDone = completedCount === subject.videos.length
+          const hasProgress = completedCount > 0 || inProgressCount > 0
+
+          return (
+            <button
+              key={subject.id}
+              onClick={() => { setCurrentSubject(subject); navigate('prevideoscreen') }}
+              style={{
+                width: '100%', marginBottom: 12, borderRadius: 16, border: `1.5px solid ${BD}`,
+                background: 'white', cursor: 'pointer', textAlign: 'left', overflow: 'hidden',
+                boxShadow: '0 2px 8px rgba(83,74,183,0.06)',
+              }}
+            >
+              {/* Colour bar */}
+              <div style={{ height: 4, background: subject.color, width: '100%' }} />
+
+              <div style={{ padding: '14px 16px' }}>
+                {/* Subject name row */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 4 }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: T1, lineHeight: 1.3 }}>{subject.name}</div>
+                  {allDone && (
+                    <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: GREEN, background: GREENBG, padding: '2px 8px', borderRadius: 50 }}>All done ✓</span>
+                  )}
+                </div>
+
+                {/* Description */}
+                <div style={{ fontSize: 12, color: T3, lineHeight: 1.5, marginBottom: 10 }}>{subject.description}</div>
+
+                {/* Progress bar */}
+                <div style={{ height: 3, background: BD, borderRadius: 2, overflow: 'hidden', marginBottom: 8 }}>
+                  <div style={{
+                    height: '100%', borderRadius: 2, transition: 'width 0.3s',
+                    width: `${(completedCount / subject.videos.length) * 100}%`,
+                    background: allDone ? GREEN : subject.color,
+                  }} />
+                </div>
+
+                {/* Stats row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, color: T3 }}>{subject.videos.length} videos</span>
+                    {hasProgress && (
+                      <span style={{ fontSize: 11, color: completedCount > 0 ? subject.color : T3, fontWeight: 600 }}>
+                        {completedCount > 0 ? `${completedCount} completed` : ''}
+                        {inProgressCount > 0 && completedCount > 0 ? ' · ' : ''}
+                        {inProgressCount > 0 ? `${inProgressCount} in progress` : ''}
+                      </span>
+                    )}
+                    {!hasProgress && (
+                      <span style={{ fontSize: 11, color: T3 }}>Not started</span>
+                    )}
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+                </div>
+              </div>
+            </button>
+          )
+        })}
+        <div style={{ height: 16 }} />
       </div>
     </div>
   )
