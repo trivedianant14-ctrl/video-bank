@@ -131,7 +131,7 @@ function QuizTimerRing({ timeLeft }) {
 const DOWNLOAD_QUALITIES = [
   { id: 'auto',   label: 'Auto',   desc: 'Adjusts to your connection · may use more space', size: '~150 MB avg', badge: 'Wi-Fi Suggested' },
   { id: 'low',    label: 'Low',    desc: '360p · Smaller file, fastest download',            size: '~70 MB',      badge: null },
-  { id: 'medium', label: 'Medium', desc: '720p · Good balance of quality and size',          size: '~150 MB',     badge: null },
+  { id: 'medium', label: 'Medium', desc: '720p · Good balance of quality and size',          size: '~150 MB',     badge: 'Suggested' },
   { id: 'high',   label: 'High',   desc: '1080p · Best quality, largest file',               size: '~280 MB',     badge: null },
 ]
 
@@ -156,6 +156,9 @@ export default function VideoPlayer({
   const [showDoubtPopup, setShowDoubtPopup] = useState(false)
   const [showDoubtToast, setShowDoubtToast] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
+  const [reportSelectedIssue, setReportSelectedIssue] = useState('')
+  const [reportDetailText, setReportDetailText] = useState('')
+  const [showReportSuccessPopup, setShowReportSuccessPopup] = useState(false)
   const [showResourceModal, setShowResourceModal] = useState(null)
 
   const [liked, setLiked] = useState(false)
@@ -170,7 +173,7 @@ export default function VideoPlayer({
   const savedToastTimerRef = useRef(null)
 
   const [showDownloadQualitySheet, setShowDownloadQualitySheet] = useState(false)
-  const [downloadQuality, setDownloadQuality] = useState('auto')
+  const [downloadQuality, setDownloadQuality] = useState('medium')
   const [saveQualitySetting, setSaveQualitySetting] = useState(true)
   const [showDownloadToast, setShowDownloadToast] = useState(false)
   const downloadToastTimerRef = useRef(null)
@@ -1684,20 +1687,100 @@ export default function VideoPlayer({
 
       {/* ── REPORT MODAL ── */}
       {showReportModal && (
-        <div onClick={() => setShowReportModal(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.55)', display: 'flex', alignItems: 'flex-end', zIndex: 200 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px 20px 0 0', padding: '8px 20px 32px', width: '100%' }}>
+        <div
+          onClick={() => { setShowReportModal(false); setReportSelectedIssue(''); setReportDetailText('') }}
+          style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.55)', display: 'flex', alignItems: 'flex-end', zIndex: 200 }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px 20px 0 0', padding: '8px 20px 32px', width: '100%', maxHeight: '85vh', overflowY: 'auto' }}>
             <div className="sheet-handle" />
-            <div style={{ fontSize: 16, fontWeight: 700, color: T1, margin: '14px 0 6px' }}>Report an issue</div>
-            <div style={{ fontSize: 13, color: T2, marginBottom: 14, lineHeight: 1.5 }}>What's the problem with this video?</div>
-            {['Video not loading', 'Audio issue', 'Wrong content', 'Subtitles incorrect', 'Other'].map(opt => (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '14px 0 4px' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: T1 }}>Report an issue</div>
               <button
-                key={opt}
-                onClick={() => { console.log('report:', opt); setShowReportModal(false) }}
-                style={{ width: '100%', padding: '12px 14px', marginBottom: 8, borderRadius: 10, border: `1px solid ${BD}`, background: BG2, color: T1, fontSize: 13, textAlign: 'left', cursor: 'pointer' }}
+                onClick={() => { setShowReportModal(false); setReportSelectedIssue(''); setReportDetailText('') }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T2, padding: '4px 0' }}
               >
-                {opt}
+                Cancel
               </button>
-            ))}
+            </div>
+            <div style={{ fontSize: 13, color: T2, marginBottom: 14, lineHeight: 1.5 }}>What's the problem with this video?</div>
+
+            {['Video not loading', 'Audio issue', 'Wrong content', 'Subtitles incorrect', 'Other'].map(opt => {
+              const sel = reportSelectedIssue === opt
+              return (
+                <button
+                  key={opt}
+                  onClick={() => setReportSelectedIssue(opt)}
+                  style={{
+                    width: '100%', padding: '12px 14px', marginBottom: 8,
+                    borderRadius: 10, border: `1.5px solid ${sel ? P : BD}`,
+                    background: sel ? PL : BG2, color: sel ? P : T1,
+                    fontSize: 13, fontWeight: sel ? 600 : 400,
+                    textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+                  }}
+                >
+                  <div style={{
+                    width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                    border: `2px solid ${sel ? P : '#c0c0d8'}`, background: sel ? P : 'white',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {sel && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'white' }} />}
+                  </div>
+                  {opt}
+                </button>
+              )
+            })}
+
+            <textarea
+              placeholder="Add more details... (optional)"
+              value={reportDetailText}
+              onChange={e => setReportDetailText(e.target.value)}
+              rows={3}
+              style={{
+                width: '100%', marginTop: 4, marginBottom: 18, padding: '11px 14px',
+                borderRadius: 10, border: `1.5px solid ${BD}`, background: BG2,
+                fontSize: 13, color: T1, resize: 'none', outline: 'none',
+                fontFamily: 'inherit', lineHeight: 1.5,
+              }}
+            />
+
+            <button
+              onClick={() => {
+                setShowReportModal(false)
+                setReportSelectedIssue('')
+                setReportDetailText('')
+                setShowReportSuccessPopup(true)
+              }}
+              disabled={!reportSelectedIssue}
+              className="btn-primary"
+              style={{ width: '100%', padding: 14, fontSize: 14, fontWeight: 700, opacity: reportSelectedIssue ? 1 : 0.45 }}
+            >
+              Submit report
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── REPORT SUCCESS POPUP ── */}
+      {showReportSuccessPopup && (
+        <div
+          onClick={() => setShowReportSuccessPopup(false)}
+          style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 250, padding: '0 28px' }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 20, padding: '32px 24px 28px', width: '100%', textAlign: 'center' }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#EAF3DE', border: '2px solid #97C459', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg>
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: T1, marginBottom: 8 }}>Issue reported</div>
+            <div style={{ fontSize: 13, color: T2, lineHeight: 1.6, marginBottom: 24 }}>
+              Thank you for your feedback. Our team will review it and get back to you shortly.
+            </div>
+            <button
+              onClick={() => setShowReportSuccessPopup(false)}
+              className="btn-primary"
+              style={{ width: '100%', padding: 14, fontSize: 14, fontWeight: 700 }}
+            >
+              Done
+            </button>
           </div>
         </div>
       )}
