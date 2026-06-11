@@ -140,35 +140,30 @@ export default function PreVideoScreen({
         </div>
       </div>
 
-      {/* Top bar: Back · Subject · Index */}
+      {/* Top bar: Back · Subject + tutor byline */}
       <div style={{ padding: '4px 16px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${BD}`, flexShrink: 0 }}>
         <button
           onClick={() => navigate('home')}
-          style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px 4px 0' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px 4px 0', flexShrink: 0 }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T2} strokeWidth="2.2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
           <span style={{ fontSize: 13, color: T2 }}>Back</span>
         </button>
 
-        <div style={{ fontSize: 15, fontWeight: 800, color: T1, textAlign: 'center', flex: 1, padding: '0 8px' }}>
-          {currentSubject.name}
+        {/* Subject name + tappable tutor byline */}
+        <div style={{ flex: 1, textAlign: 'center', padding: '0 8px' }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: T1 }}>{currentSubject.name}</div>
+          <button
+            onClick={() => setShowTutorSheet(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0 0', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+          >
+            <span style={{ fontSize: 11, color: T3 }}>🎓</span>
+            <span style={{ fontSize: 11, color: T3, fontWeight: 500 }}>Dr. Ashutosh Verma</span>
+          </button>
         </div>
 
-        {currentSubject.chapters ? (
-          <button
-            onClick={() => setShowIndexSheet(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0 4px 8px' }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2" strokeLinecap="round">
-              <line x1="3" y1="6"  x2="21" y2="6"/>
-              <line x1="3" y1="12" x2="15" y2="12"/>
-              <line x1="3" y1="18" x2="18" y2="18"/>
-            </svg>
-            <span style={{ fontSize: 13, color: P, fontWeight: 600 }}>Index</span>
-          </button>
-        ) : (
-          <div style={{ width: 60 }}/>
-        )}
+        {/* Spacer to balance Back button */}
+        <div style={{ width: 60, flexShrink: 0 }}/>
       </div>
 
       {/* ── Scrollable body ──────────────────────────────────────────────── */}
@@ -336,31 +331,22 @@ export default function PreVideoScreen({
           </div>
         ))}
 
-        {/* Tutor card */}
-        <div style={{ margin: '20px 16px 16px', padding: '14px', borderRadius: 12, border: `1.5px solid ${BD}`, background: BG2, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: PL, border: `2px solid ${P}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>
-            🎓
-          </div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: T1 }}>Dr. Ashutosh Verma</div>
-            <div style={{ fontSize: 11, color: T3, marginTop: 2, lineHeight: 1.4 }}>12 yrs nursing education · B.Sc, M.Sc Nursing · NPrep curriculum author</div>
-          </div>
-        </div>
-
         <div style={{ height: 80 }}/>
       </div>
 
-      {/* Floating tutor button */}
-      <button
-        onClick={() => setShowTutorSheet(true)}
-        style={{ position: 'absolute', bottom: 20, right: 16, width: 48, height: 48, borderRadius: '50%', background: P, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(83,74,183,0.4)', zIndex: 10 }}
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M9.5 9.5a2.5 2.5 0 015 0c0 2-2.5 2.5-2.5 3.5"/>
-          <circle cx="12" cy="17" r="0.8" fill="white"/>
-        </svg>
-      </button>
+      {/* Floating Index button */}
+      {currentSubject.chapters && (
+        <button
+          onClick={() => setShowIndexSheet(true)}
+          style={{ position: 'absolute', bottom: 20, right: 16, width: 48, height: 48, borderRadius: '50%', background: P, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(83,74,183,0.4)', zIndex: 10 }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
+            <line x1="3" y1="6"  x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="15" y2="12"/>
+            <line x1="3" y1="18" x2="18" y2="18"/>
+          </svg>
+        </button>
+      )}
 
       {/* Toast */}
       {toast && (
