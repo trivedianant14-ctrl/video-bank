@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { VIDEO_DURATION_SECS, GROUP_SIZE } from '../data/subjects'
 
 // ─── palette ──────────────────────────────────────────────────────────────────
@@ -42,14 +42,22 @@ export default function PreVideoScreen({
 }) {
   if (!currentSubject) return null
 
-  const [activeFilter,   setActiveFilter]   = useState('all')
-  const [showIndexSheet, setShowIndexSheet] = useState(false)
-  const [showOrderModal, setShowOrderModal] = useState(false)
-  const [showTutorSheet, setShowTutorSheet] = useState(false)
-  const [toast,          setToast]          = useState(null)
+  const [activeFilter,    setActiveFilter]    = useState('all')
+  const [showIndexSheet,  setShowIndexSheet]  = useState(false)
+  const [showOrderModal,  setShowOrderModal]  = useState(false)
+  const [showTutorSheet,  setShowTutorSheet]  = useState(false)
+  const [toast,           setToast]           = useState(null)
+  const [activeChapterId, setActiveChapterId] = useState(null)
 
-  const scrollRef   = useRef(null)
-  const chapterRefs = useRef({})
+  const scrollRef        = useRef(null)
+  const chapterRefs      = useRef({})
+  const activeChapterRef = useRef(null)
+
+  // reset sticky header when filter changes
+  useEffect(() => {
+    setActiveChapterId(null)
+    activeChapterRef.current = null
+  }, [activeFilter])
 
   // ── chapters ────────────────────────────────────────────────────────────────
   const chapters  = currentSubject.chapters
@@ -125,6 +133,23 @@ export default function PreVideoScreen({
     setActiveFilter('all')
   }
 
+  const handleScroll = () => {
+    const box = scrollRef.current
+    if (!box) return
+    const boxTop = box.getBoundingClientRect().top
+    // Find the last chapter whose top edge has reached/passed the scroll container top
+    let current = null
+    for (const ch of filteredChapters) {
+      const el = chapterRefs.current[ch.id]
+      if (!el) continue
+      if (el.getBoundingClientRect().top - boxTop <= 1) current = ch
+    }
+    if (current?.id !== activeChapterRef.current?.id) {
+      activeChapterRef.current = current
+      setActiveChapterId(current?.id ?? null)
+    }
+  }
+
   const ctaLabel = cta.type === 'resume' ? 'Resume' : cta.type === 'continue' ? 'Continue with' : 'Start with'
 
   // ── render ──────────────────────────────────────────────────────────────────
@@ -166,8 +191,26 @@ export default function PreVideoScreen({
         <div style={{ width: 60, flexShrink: 0 }}/>
       </div>
 
+      {/* ── Dynamic sticky chapter header ────────────────────────────────── */}
+      {activeChapterId && (() => {
+        const ch = filteredChapters.find(c => c.id === activeChapterId)
+        if (!ch) return null
+        const done = ch.videos.filter(v => videoProgress[v.id]?.completed).length
+        return (
+          <div
+            key={activeChapterId}
+            className="chapter-header-enter"
+            style={{ flexShrink: 0, background: 'white', borderBottom: `1px solid ${BD}`, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 8px rgba(83,74,183,0.07)' }}
+          >
+            <div style={{ width: 3, height: 16, borderRadius: 2, background: currentSubject.color || P, flexShrink: 0 }}/>
+            <span style={{ fontSize: 12, fontWeight: 700, color: T2, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{ch.name}</span>
+            <span style={{ fontSize: 11, color: T3 }}>{done}/{ch.videos.length}</span>
+          </div>
+        )
+      })()}
+
       {/* ── Scrollable body ──────────────────────────────────────────────── */}
-      <div ref={scrollRef} className="scroll" style={{ flex: 1, overflowY: 'auto' }}>
+      <div ref={scrollRef} onScroll={handleScroll} className="scroll" style={{ flex: 1, overflowY: 'auto' }}>
 
         {/* Progress summary */}
         <div style={{ padding: '16px 16px 0' }}>
@@ -270,11 +313,11 @@ export default function PreVideoScreen({
           </div>
         ) : filteredChapters.map(ch => (
           <div key={ch.id} ref={el => { chapterRefs.current[ch.id] = el }}>
-            {/* Sticky chapter header */}
-            <div style={{ position: 'sticky', top: 0, zIndex: 2, background: 'white', borderBottom: `1px solid ${BD}`, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 3, height: 16, borderRadius: 2, background: currentSubject.color || P, flexShrink: 0 }}/>
-              <span style={{ fontSize: 12, fontWeight: 700, color: T2, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{ch.name}</span>
-              <span style={{ fontSize: 11, color: T3, marginLeft: 2 }}>
+            {/* Chapter divider (not sticky — handled by the single sticky header above) */}
+            <div style={{ background: BG2, borderBottom: `1px solid ${BD}`, padding: '6px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 3, height: 14, borderRadius: 2, background: currentSubject.color || P, flexShrink: 0 }}/>
+              <span style={{ fontSize: 11, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{ch.name}</span>
+              <span style={{ fontSize: 11, color: T3 }}>
                 {ch.videos.filter(v => videoProgress[v.id]?.completed).length}/{ch.videos.length}
               </span>
             </div>

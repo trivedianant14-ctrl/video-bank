@@ -128,3 +128,14 @@ input, textarea { font-family: inherit; }
 .screen-forward  { animation: slideInRight 0.26s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
 .screen-backward { animation: slideInLeft  0.26s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
 .screen-up       { animation: slideUp      0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Chapter sticky header transition */
+@keyframes chapterSlideIn {
+  from { opacity: 0; transform: translateY(-110%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes chapterSlideOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-110%); }
+}
+.chapter-header-enter { animation: chapterSlideIn 0.18s cubic-bezier(0.22, 1, 0.36, 1) both; }
