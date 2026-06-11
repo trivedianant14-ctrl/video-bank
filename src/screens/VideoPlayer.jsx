@@ -84,6 +84,14 @@ export default function VideoPlayer({
   const [disliked, setDisliked] = useState(false)
   const [showDislikeFeedback, setShowDislikeFeedback] = useState(false)
   const [dislikeFeedbackText, setDislikeFeedbackText] = useState('')
+  const [showLikeFeedback, setShowLikeFeedback] = useState(false)
+  const [likeRating, setLikeRating] = useState(0)
+  const [likeComment, setLikeComment] = useState('')
+
+  const [showSavedToast, setShowSavedToast] = useState(false)
+  const savedToastTimerRef = useRef(null)
+
+  const [pendingSeek, setPendingSeek] = useState(null) // { ts, name }
 
   const [language, setLanguage] = useState('EN')
   const [darkMode, setDarkMode] = useState(false)
@@ -102,11 +110,12 @@ export default function VideoPlayer({
   const [quizPhase, setQuizPhase] = useState('questions')
 
   const bg = darkMode ? '#0d0d1a' : 'white'
-  const cardBg = darkMode ? '#1a1a2e' : BG2
-  const borderClr = darkMode ? '#2a2a40' : BD
-  const text1 = darkMode ? '#e8e8f2' : T1
-  const text2 = darkMode ? '#9898b0' : T2
-  const text3 = darkMode ? '#5a5a78' : T3
+  const cardBg = darkMode ? '#1e1e30' : BG2
+  const borderClr = darkMode ? '#2e2e48' : BD
+  // Brighter text values in dark mode for contrast
+  const text1 = darkMode ? '#f0f0f8' : T1
+  const text2 = darkMode ? '#c0bfe0' : T2
+  const text3 = darkMode ? '#9090b8' : T3
 
   const videoId = currentVideo?.id || 'cv-part1'
   const title = currentVideo?.title || 'Cardiovascular System — Part 1'
@@ -158,8 +167,14 @@ export default function VideoPlayer({
   }
 
   const handleSaveVideo = () => {
-    if (isSaved) { unsaveVideo?.(videoId) }
-    else { saveVideo?.({ id: videoId, title, subject: currentVideo?.subject || 'Applied Anatomy', savedAt: Date.now() }) }
+    if (isSaved) {
+      unsaveVideo?.(videoId)
+    } else {
+      saveVideo?.({ id: videoId, title, subject: currentVideo?.subject || 'Applied Anatomy', savedAt: Date.now() })
+      if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current)
+      setShowSavedToast(true)
+      savedToastTimerRef.current = setTimeout(() => setShowSavedToast(false), 3000)
+    }
   }
 
   const handleSaveResource = (type) => {
@@ -174,10 +189,25 @@ export default function VideoPlayer({
     }
   }
 
-  const handleLike = () => { setLiked(l => !l); if (!liked) setDisliked(false) }
+  // Like: set liked immediately, then open feedback popup (optional)
+  const handleLike = () => {
+    if (!liked) {
+      setLiked(true)
+      setDisliked(false)
+      setShowLikeFeedback(true)
+    } else {
+      setLiked(false)
+    }
+  }
+
+  // Dislike: open popup WITHOUT marking as disliked yet — only Submit confirms it
   const handleDislike = () => {
-    if (!disliked) { setDisliked(true); setLiked(false); setShowDislikeFeedback(true) }
-    else { setDisliked(false) }
+    if (!disliked) {
+      setLiked(false)
+      setShowDislikeFeedback(true)
+    } else {
+      setDisliked(false)
+    }
   }
 
   const seekBy = (delta) => {
@@ -191,6 +221,18 @@ export default function VideoPlayer({
     const secs = parseInt(parts[0]) * 60 + parseInt(parts[1])
     progressRef.current = secs / TOTAL_DURATION
     setDisplayProgress(progressRef.current)
+  }
+
+  // Check if tapping a topic timestamp is a forward skip; warn if so
+  const handleTopicClick = (topic) => {
+    const parts = topic.ts.split(':')
+    const targetSecs = parseInt(parts[0]) * 60 + parseInt(parts[1])
+    const nowSecs = Math.floor(progressRef.current * TOTAL_DURATION)
+    if (targetSecs > nowSecs) {
+      setPendingSeek({ ts: topic.ts, name: topic.name })
+    } else {
+      seekToTimestamp(topic.ts)
+    }
   }
 
   const handleWatchAgain = () => {
@@ -226,7 +268,6 @@ export default function VideoPlayer({
         <div className="scroll" style={{ flex: 1, overflowY: 'auto', padding: '20px 16px' }}>
           {quizPhase === 'questions' ? (
             <>
-              {/* Progress dots */}
               <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
                 {QUIZ_QUESTIONS.map((_, i) => (
                   <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= quizQIndex ? P : borderClr, opacity: i < quizQIndex ? 0.4 : 1 }} />
@@ -362,11 +403,10 @@ export default function VideoPlayer({
         onClick={() => setShowControls(c => !c)}
         style={{ background: '#0d0d1a', flexShrink: 0, position: 'relative', width: '100%', aspectRatio: '16/9', cursor: 'pointer', overflow: 'hidden' }}
       >
-        {/* Gradients */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%)', pointerEvents: 'none', opacity: showControls ? 1 : 0, transition: 'opacity 0.22s' }} />
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '45%', background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)', pointerEvents: 'none' }} />
 
-        {/* Top bar: back + language + settings */}
+        {/* Top bar: back · EN/HI · ? · gear */}
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, padding: '10px 12px',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -414,7 +454,7 @@ export default function VideoPlayer({
           </div>
         </div>
 
-        {/* Centre controls: rewind / play-pause / forward */}
+        {/* Centre controls */}
         <div style={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
           display: 'flex', alignItems: 'center', gap: 36,
@@ -455,7 +495,7 @@ export default function VideoPlayer({
           </button>
         </div>
 
-        {/* Bottom: timestamp + progress bar + fullscreen */}
+        {/* Bottom: time + scrubber + fullscreen */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 12px 10px' }}>
           <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -521,6 +561,19 @@ export default function VideoPlayer({
         </div>
       )}
 
+      {/* Saved toast */}
+      {showSavedToast && (
+        <div style={{
+          position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+          background: '#1a1a2e', color: 'white', padding: '10px 20px', borderRadius: 50,
+          fontSize: 12, fontWeight: 600, zIndex: 200, whiteSpace: 'nowrap',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill={P} stroke={P} strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+          Video added to your save list
+        </div>
+      )}
+
       {/* SCROLLABLE CONTENT */}
       <div className="scroll" style={{ flex: 1, overflowY: 'auto', background: bg }}>
 
@@ -530,44 +583,47 @@ export default function VideoPlayer({
           <div style={{ fontSize: 11, color: text3 }}>Uploaded on: {uploadDate}</div>
         </div>
 
-        {/* Action row */}
+        {/* Action row — explicit color on each button so SVG currentColor is visible in dark mode */}
         <div style={{ padding: '12px 0', borderBottom: `1px solid ${borderClr}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-around' }}>
             {[
               {
-                id: 'like', label: 'Like', active: liked, color: P,
-                icon: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? P : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>,
+                id: 'like', label: 'Like', active: liked, activeColor: P, inactiveColor: text1,
+                icon: (a, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? P : 'none'} stroke={c} strokeWidth="1.8" strokeLinecap="round"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>,
                 onClick: handleLike,
               },
               {
-                id: 'dislike', label: 'Dislike', active: disliked, color: '#791F1F',
-                icon: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? '#791F1F' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z"/><path d="M17 2h2.67A2.31 2.31 0 0122 4v7a2.31 2.31 0 01-2.33 2H17"/></svg>,
+                id: 'dislike', label: 'Dislike', active: disliked, activeColor: '#791F1F', inactiveColor: text1,
+                icon: (a, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? '#791F1F' : 'none'} stroke={a ? '#791F1F' : c} strokeWidth="1.8" strokeLinecap="round"><path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z"/><path d="M17 2h2.67A2.31 2.31 0 0122 4v7a2.31 2.31 0 01-2.33 2H17"/></svg>,
                 onClick: handleDislike,
               },
               {
-                id: 'save', label: 'Save', active: isSaved, color: P,
-                icon: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? P : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>,
+                id: 'save', label: isSaved ? 'Saved' : 'Save', active: isSaved, activeColor: P, inactiveColor: text1,
+                icon: (a, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? P : 'none'} stroke={a ? P : c} strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>,
                 onClick: handleSaveVideo,
               },
               {
-                id: 'download', label: 'Download', active: false, color: text2,
-                icon: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+                id: 'download', label: 'Download', active: false, activeColor: text2, inactiveColor: text1,
+                icon: (_, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
                 onClick: () => console.log('download', title),
               },
               {
-                id: 'share', label: 'Share', active: false, color: text2,
-                icon: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
+                id: 'share', label: 'Share', active: false, activeColor: text2, inactiveColor: text1,
+                icon: (_, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
                 onClick: () => console.log('share', title),
               },
-            ].map(a => (
-              <button
-                key={a.id} onClick={a.onClick}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 10px' }}
-              >
-                {a.icon(a.active)}
-                <span style={{ fontSize: 10, color: a.active ? a.color : text3 }}>{a.label}</span>
-              </button>
-            ))}
+            ].map(a => {
+              const iconColor = a.active ? a.activeColor : a.inactiveColor
+              return (
+                <button
+                  key={a.id} onClick={a.onClick}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 10px' }}
+                >
+                  {a.icon(a.active, iconColor)}
+                  <span style={{ fontSize: 10, color: a.active ? a.activeColor : text2 }}>{a.label}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -601,7 +657,7 @@ export default function VideoPlayer({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {TOPICS_COVERED.map((topic, i) => (
                 <button
-                  key={i} onClick={() => seekToTimestamp(topic.ts)}
+                  key={i} onClick={() => handleTopicClick(topic)}
                   style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px', borderRadius: 10, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }}
                 >
                   <span style={{ fontSize: 11, fontWeight: 700, color: P, minWidth: 30, flexShrink: 0 }}>{topic.ts}</span>
@@ -671,11 +727,11 @@ export default function VideoPlayer({
 
               <div style={{ display: 'flex', gap: 10 }}>
                 <button style={{ flex: 1, padding: '14px 8px', borderRadius: 12, border: `1.5px dashed ${borderClr}`, background: 'none', color: text2, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polyline points="16,16 12,12 8,16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={text2} strokeWidth="1.8" strokeLinecap="round"><polyline points="16,16 12,12 8,16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
                   <span>Capture & upload</span>
                 </button>
                 <button style={{ flex: 1, padding: '14px 8px', borderRadius: 12, border: `1.5px dashed ${borderClr}`, background: 'none', color: text2, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={text2} strokeWidth="1.8" strokeLinecap="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
                   <span>Record voice</span>
                 </button>
               </div>
@@ -686,7 +742,7 @@ export default function VideoPlayer({
         <div style={{ height: 8 }} />
       </div>
 
-      {/* REPORT BAR — sticky */}
+      {/* REPORT BAR */}
       <button
         onClick={() => setShowReportModal(true)}
         style={{ flexShrink: 0, width: '100%', padding: '13px', background: GREENBG, borderTop: `1px solid ${GREENBORDER}`, borderLeft: 'none', borderRight: 'none', borderBottom: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: GREEN, textAlign: 'center' }}
@@ -694,7 +750,7 @@ export default function VideoPlayer({
         Having an issue? Tap to report
       </button>
 
-      {/* DOUBT POPUP */}
+      {/* ── DOUBT POPUP ── */}
       {showDoubtPopup && (
         <div onClick={() => setShowDoubtPopup(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '0 20px' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: '22px 18px', width: '100%', maxWidth: 340 }}>
@@ -716,21 +772,28 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* DISLIKE FEEDBACK */}
+      {/* ── DISLIKE FEEDBACK — Cancel does NOT apply dislike ── */}
       {showDislikeFeedback && (
         <div onClick={() => setShowDislikeFeedback(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '0 20px' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: '22px 18px', width: '100%', maxWidth: 340 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: T1, marginBottom: 12 }}>What didn't work for you?</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: T1, marginBottom: 4 }}>What didn't work for you?</div>
+            <div style={{ fontSize: 12, color: T3, marginBottom: 12, lineHeight: 1.5 }}>This is optional — helps us improve the content.</div>
             <textarea
               value={dislikeFeedbackText} onChange={e => setDislikeFeedbackText(e.target.value)}
               placeholder="Tell us what felt off… (optional)"
               style={{ width: '100%', minHeight: 80, padding: '10px 12px', border: `1px solid ${BD}`, borderRadius: 10, fontSize: 13, color: T1, resize: 'none', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: 12 }}
             />
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setShowDislikeFeedback(false)} style={{ flex: 1, padding: '11px', borderRadius: 10, border: `1px solid ${BD}`, background: 'white', fontSize: 13, fontWeight: 600, color: T2, cursor: 'pointer' }}>
-                Skip
+              <button
+                onClick={() => { setShowDislikeFeedback(false); setDislikeFeedbackText('') }}
+                style={{ flex: 1, padding: '11px', borderRadius: 10, border: `1px solid ${BD}`, background: 'white', fontSize: 13, fontWeight: 600, color: T2, cursor: 'pointer' }}
+              >
+                Cancel
               </button>
-              <button onClick={() => { setShowDislikeFeedback(false); setDislikeFeedbackText('') }} className="btn-primary" style={{ flex: 1.5, fontSize: 13 }}>
+              <button
+                onClick={() => { setDisliked(true); setShowDislikeFeedback(false); setDislikeFeedbackText('') }}
+                className="btn-primary" style={{ flex: 1.5, fontSize: 13 }}
+              >
                 Submit
               </button>
             </div>
@@ -738,7 +801,83 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* RESOURCE VIEWER MODAL */}
+      {/* ── LIKE FEEDBACK (optional) ── */}
+      {showLikeFeedback && (
+        <div onClick={() => { setShowLikeFeedback(false); setLikeRating(0); setLikeComment('') }} style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '0 20px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: '24px 18px', width: '100%', maxWidth: 340 }}>
+            <div style={{ fontSize: 28, textAlign: 'center', marginBottom: 10 }}>🙌</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: T1, textAlign: 'center', marginBottom: 6, lineHeight: 1.4 }}>
+              Glad this one clicked for you!
+            </div>
+            <div style={{ fontSize: 13, color: T2, textAlign: 'center', marginBottom: 18, lineHeight: 1.6 }}>
+              Want to tell us what made it good? Helps us make more videos like this. (Bilkul optional hai.)
+            </div>
+
+            {/* Star rating */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 16 }}>
+              {[1, 2, 3, 4, 5].map(star => (
+                <button
+                  key={star} onClick={() => setLikeRating(star)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 28, lineHeight: 1, color: star <= likeRating ? '#F4C430' : BD, transition: 'color 0.15s' }}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={likeComment} onChange={e => setLikeComment(e.target.value)}
+              placeholder="Kya acha laga? (optional)"
+              style={{ width: '100%', minHeight: 70, padding: '10px 12px', border: `1px solid ${BD}`, borderRadius: 10, fontSize: 13, color: T1, resize: 'none', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: 14 }}
+            />
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => { setShowLikeFeedback(false); setLikeRating(0); setLikeComment('') }}
+                style={{ flex: 1, padding: '11px', borderRadius: 10, border: `1px solid ${BD}`, background: 'white', fontSize: 13, fontWeight: 600, color: T2, cursor: 'pointer' }}
+              >
+                Skip
+              </button>
+              <button
+                onClick={() => { console.log('like feedback', { likeRating, likeComment }); setShowLikeFeedback(false); setLikeRating(0); setLikeComment('') }}
+                className="btn-primary" style={{ flex: 1.5, fontSize: 13 }}
+              >
+                Send feedback
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TIMESTAMP SKIP WARNING ── */}
+      {pendingSeek && (
+        <div onClick={() => setPendingSeek(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '0 20px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: '22px 18px', width: '100%', maxWidth: 340 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: T1, marginBottom: 8, lineHeight: 1.4 }}>
+              Skip ahead to {pendingSeek.ts}?
+            </div>
+            <div style={{ fontSize: 13, color: T2, marginBottom: 20, lineHeight: 1.6 }}>
+              You'll jump to <span style={{ fontWeight: 600, color: T1 }}>"{pendingSeek.name}"</span>. The content in between will be skipped.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setPendingSeek(null)}
+                style={{ flex: 1, padding: '11px', borderRadius: 10, border: `1px solid ${BD}`, background: 'white', fontSize: 13, fontWeight: 600, color: T2, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { seekToTimestamp(pendingSeek.ts); setPendingSeek(null) }}
+                className="btn-primary" style={{ flex: 1.5, fontSize: 13 }}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── RESOURCE VIEWER MODAL ── */}
       {showResourceModal && (
         <div onClick={() => setShowResourceModal(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '0 20px' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: '22px 18px', width: '100%', maxWidth: 340, textAlign: 'center' }}>
@@ -761,7 +900,7 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* REPORT MODAL */}
+      {/* ── REPORT MODAL ── */}
       {showReportModal && (
         <div onClick={() => setShowReportModal(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.55)', display: 'flex', alignItems: 'flex-end', zIndex: 200 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px 20px 0 0', padding: '8px 20px 32px', width: '100%' }}>
@@ -781,7 +920,7 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* SETTINGS SHEET */}
+      {/* ── SETTINGS SHEET ── */}
       {showSettings && (
         <div className="overlay" onClick={() => setShowSettings(false)}>
           <div className="sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '75vh' }}>
@@ -809,10 +948,8 @@ export default function VideoPlayer({
                 <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 10 }}>Playback Speed</div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {['0.75x', '1x', '1.25x', '1.5x', '2x'].map(s => (
-                    <button
-                      key={s} onClick={() => setPlaybackSpeed(s)}
-                      style={{ flex: 1, padding: '8px 2px', borderRadius: 8, border: `1.5px solid ${playbackSpeed === s ? P : BD}`, background: playbackSpeed === s ? PL : 'white', color: playbackSpeed === s ? PD : T2, fontSize: 11, fontWeight: playbackSpeed === s ? 700 : 400, cursor: 'pointer' }}
-                    >
+                    <button key={s} onClick={() => setPlaybackSpeed(s)}
+                      style={{ flex: 1, padding: '8px 2px', borderRadius: 8, border: `1.5px solid ${playbackSpeed === s ? P : BD}`, background: playbackSpeed === s ? PL : 'white', color: playbackSpeed === s ? PD : T2, fontSize: 11, fontWeight: playbackSpeed === s ? 700 : 400, cursor: 'pointer' }}>
                       {s}
                     </button>
                   ))}
@@ -823,10 +960,8 @@ export default function VideoPlayer({
                 <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 10 }}>Rewind / Forward</div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {[5, 10, 15].map(s => (
-                    <button
-                      key={s} onClick={() => setSeekInterval(s)}
-                      style={{ flex: 1, padding: '9px 4px', borderRadius: 8, border: `1.5px solid ${seekInterval === s ? P : BD}`, background: seekInterval === s ? PL : 'white', color: seekInterval === s ? PD : T2, fontSize: 12, fontWeight: seekInterval === s ? 700 : 400, cursor: 'pointer' }}
-                    >
+                    <button key={s} onClick={() => setSeekInterval(s)}
+                      style={{ flex: 1, padding: '9px 4px', borderRadius: 8, border: `1.5px solid ${seekInterval === s ? P : BD}`, background: seekInterval === s ? PL : 'white', color: seekInterval === s ? PD : T2, fontSize: 12, fontWeight: seekInterval === s ? 700 : 400, cursor: 'pointer' }}>
                       {s}s
                     </button>
                   ))}
@@ -837,10 +972,8 @@ export default function VideoPlayer({
                 <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 10 }}>Video Quality</div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {['Auto', '480p', '720p', '1080p'].map(q => (
-                    <button
-                      key={q} onClick={() => setVideoQuality(q)}
-                      style={{ flex: 1, padding: '8px 2px', borderRadius: 8, border: `1.5px solid ${videoQuality === q ? P : BD}`, background: videoQuality === q ? PL : 'white', color: videoQuality === q ? PD : T2, fontSize: 11, fontWeight: videoQuality === q ? 700 : 400, cursor: 'pointer' }}
-                    >
+                    <button key={q} onClick={() => setVideoQuality(q)}
+                      style={{ flex: 1, padding: '8px 2px', borderRadius: 8, border: `1.5px solid ${videoQuality === q ? P : BD}`, background: videoQuality === q ? PL : 'white', color: videoQuality === q ? PD : T2, fontSize: 11, fontWeight: videoQuality === q ? 700 : 400, cursor: 'pointer' }}>
                       {q}
                     </button>
                   ))}
