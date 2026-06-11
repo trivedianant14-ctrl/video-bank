@@ -21,6 +21,14 @@ const TOPICS_COVERED = [
   { name: 'Clinical Correlations', ts: '11:00' },
 ]
 
+const TEACHER_QUESTION = {
+  askedAt: '6:30',
+  text: 'Which of the following initiates the heartbeat?',
+  options: ['AV Node', 'SA Node', 'Bundle of His', 'Purkinje Fibers'],
+  correct: 1,
+  explanation: 'The SA node fires spontaneously at 60–100 bpm — the fastest intrinsic rate in the conduction system, so it drives the heart\'s rhythm under normal conditions.',
+}
+
 const QUIZ_QUESTIONS = [
   {
     text: 'Which of the following is the primary pacemaker of the heart?',
@@ -104,7 +112,8 @@ export default function VideoPlayer({
 
   const [showSettings, setShowSettings] = useState(false)
   const [showCompletionOverlay, setShowCompletionOverlay] = useState(false)
-  const [countdown, setCountdown] = useState(5)
+  const [countdown, setCountdown] = useState(10)
+  const [teacherQAnswer, setTeacherQAnswer] = useState(null)
   const [showDoubtPopup, setShowDoubtPopup] = useState(false)
   const [showDoubtToast, setShowDoubtToast] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
@@ -130,7 +139,7 @@ export default function VideoPlayer({
   const [seekInterval, setSeekInterval] = useState(10)
   const [videoQuality, setVideoQuality] = useState('Auto')
 
-  const [activeTab, setActiveTab] = useState('resources')
+  const [activeTab, setActiveTab] = useState('topics')
   const [selfNotes, setSelfNotes] = useState('')
   const [notesSaved, setNotesSaved] = useState(false)
   const notesTimerRef = useRef(null)
@@ -187,13 +196,13 @@ export default function VideoPlayer({
     return () => clearInterval(t)
   }, [isPlaying])
 
-  // Completion countdown → auto-advance to quiz (new users only)
+  // Completion countdown → auto-advance to next video
   useEffect(() => {
-    if (!showCompletionOverlay || isReturningUser) return
-    if (countdown <= 0) { setShowCompletionOverlay(false); setPhase('quiz'); return }
+    if (!showCompletionOverlay) return
+    if (countdown <= 0) { setShowCompletionOverlay(false); navigate('prevideoscreen'); return }
     const t = setTimeout(() => setCountdown(c => c - 1), 1000)
     return () => clearTimeout(t)
-  }, [showCompletionOverlay, countdown, isReturningUser])
+  }, [showCompletionOverlay, countdown])
 
   // Doubt toast auto-dismiss
   useEffect(() => {
@@ -473,13 +482,33 @@ export default function VideoPlayer({
               )}
 
               {hasAnswered && (
-                <button
-                  onClick={() => { setShowMarkMenu(false); isLastQ ? setQuizPhase('result') : setQuizQIndex(i => i + 1) }}
-                  className="btn-primary"
-                  style={{ width: '100%', marginBottom: 20 }}
-                >
-                  {isLastQ ? 'See result' : 'Next question →'}
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                  {isLastQ ? (
+                    <>
+                      <button
+                        onClick={() => setQuizPhase('result')}
+                        className="btn-primary" style={{ width: '100%' }}
+                      >
+                        View Analysis
+                      </button>
+                      {quizQIndex > 0 && (
+                        <button
+                          onClick={() => setQuizQIndex(i => i - 1)}
+                          className="btn-outline" style={{ width: '100%' }}
+                        >
+                          ← Previous question
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setQuizQIndex(i => i + 1)}
+                      className="btn-primary" style={{ width: '100%' }}
+                    >
+                      Next question →
+                    </button>
+                  )}
+                </div>
               )}
             </>
           ) : (
@@ -591,17 +620,12 @@ export default function VideoPlayer({
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 28 }}>
-                {passed ? (
-                  <>
-                    <button onClick={() => navigate('home')} className="btn-primary" style={{ width: '100%' }}>Continue to next video</button>
-                    <button onClick={handleWatchAgain} className="btn-outline" style={{ width: '100%' }}>Watch this again</button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={handleWatchAgain} className="btn-primary" style={{ width: '100%' }}>Watch this again</button>
-                    <button onClick={() => navigate('home')} className="btn-outline" style={{ width: '100%' }}>Continue anyway</button>
-                  </>
-                )}
+                <button onClick={() => navigate('prevideoscreen')} className="btn-primary" style={{ width: '100%' }}>
+                  Continue to Video
+                </button>
+                <button onClick={handleWatchAgain} className="btn-outline" style={{ width: '100%' }}>
+                  Watch this again
+                </button>
               </div>
             </>
           )}
@@ -775,52 +799,47 @@ export default function VideoPlayer({
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.88)',
+              position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.9)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              gap: 10, zIndex: 20, padding: '0 24px',
+              gap: 10, zIndex: 20, padding: '0 28px',
             }}
           >
-            {isReturningUser ? (
-              /* ── RETURNING USER overlay ── */
-              <>
-                <div style={{ fontSize: 24, marginBottom: 2 }}>👋</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'white', textAlign: 'center' }}>You've watched this one before.</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center', lineHeight: 1.5 }}>Want to practice the questions again?</div>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 8, marginTop: 4,
-                  background: 'rgba(255,255,255,0.1)', borderRadius: 50, padding: '7px 18px',
-                }}>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: '#97C459' }}>{MOCK_PREV_SCORE}</span>
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>/ {QUIZ_QUESTIONS.length} last time · {MOCK_PREV_DATE}</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8, width: '100%', maxWidth: 280 }}>
-                  <button
-                    onClick={() => { setShowCompletionOverlay(false); setPhase('quiz') }}
-                    style={{ padding: '11px', borderRadius: 50, background: P, border: 'none', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', width: '100%' }}
-                  >
-                    Retake Quick Check
-                  </button>
-                  <button
-                    onClick={() => { setShowCompletionOverlay(false); navigate('home') }}
-                    style={{ padding: '11px', borderRadius: 50, background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%' }}
-                  >
-                    Continue to next video
-                  </button>
-                </div>
-              </>
-            ) : (
-              /* ── NEW USER overlay ── */
-              <>
-                <div style={{ fontSize: 15, fontWeight: 600, color: 'white', textAlign: 'center' }}>Done with this one. Nice.</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>Quick check coming up in {countdown}…</div>
-                <button
-                  onClick={() => { setShowCompletionOverlay(false); setPhase('quiz') }}
-                  style={{ marginTop: 6, padding: '9px 22px', borderRadius: 50, background: P, border: 'none', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-                >
-                  Continue now
-                </button>
-              </>
+            <div style={{ fontSize: 26, marginBottom: 2 }}>🎬</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'white', textAlign: 'center' }}>
+              {displayProgress >= COMPLETION_THRESHOLD ? 'Great watch!' : 'Taking a break?'}
+            </div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.62)', textAlign: 'center', lineHeight: 1.55, marginBottom: 4 }}>
+              Want to test what you just learned?
+            </div>
+
+            {/* Returning user: show previous score */}
+            {isReturningUser && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.1)', borderRadius: 50, padding: '5px 16px', marginBottom: 2 }}>
+                <span style={{ fontSize: 14, fontWeight: 800, color: '#97C459' }}>{MOCK_PREV_SCORE}/{QUIZ_QUESTIONS.length}</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>last time · {MOCK_PREV_DATE}</span>
+              </div>
             )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 290, marginTop: 6 }}>
+              {/* Practice */}
+              <button
+                onClick={() => { setShowCompletionOverlay(false); setQuizQIndex(0); setQuizAnswers({}); setQuizPhase('questions'); setPhase('quiz') }}
+                style={{ width: '100%', padding: '12px', borderRadius: 50, background: P, border: 'none', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              >
+                🎯 Practice this topic
+              </button>
+
+              {/* Continue with countdown */}
+              <button
+                onClick={() => { setShowCompletionOverlay(false); navigate('prevideoscreen') }}
+                style={{ width: '100%', padding: '12px', borderRadius: 50, background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+              >
+                Continue to next video
+                <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(255,255,255,0.15)', borderRadius: 50, padding: '2px 9px', color: 'rgba(255,255,255,0.75)' }}>
+                  {countdown}s
+                </span>
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -859,57 +878,97 @@ export default function VideoPlayer({
           <div style={{ fontSize: 11, color: text3 }}>Uploaded on: {uploadDate}</div>
         </div>
 
-        {/* Action row — explicit color on each button so SVG currentColor is visible in dark mode */}
-        <div style={{ padding: '12px 0', borderBottom: `1px solid ${borderClr}` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-            {[
-              {
-                id: 'like', label: 'Like', active: liked, activeColor: P, inactiveColor: text1,
-                icon: (a, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? P : 'none'} stroke={c} strokeWidth="1.8" strokeLinecap="round"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>,
-                onClick: handleLike,
-              },
-              {
-                id: 'dislike', label: 'Dislike', active: disliked, activeColor: '#791F1F', inactiveColor: text1,
-                icon: (a, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? '#791F1F' : 'none'} stroke={a ? '#791F1F' : c} strokeWidth="1.8" strokeLinecap="round"><path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z"/><path d="M17 2h2.67A2.31 2.31 0 0122 4v7a2.31 2.31 0 01-2.33 2H17"/></svg>,
-                onClick: handleDislike,
-              },
-              {
-                id: 'save', label: isSaved ? 'Saved' : 'Save', active: isSaved, activeColor: P, inactiveColor: text1,
-                icon: (a, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? P : 'none'} stroke={a ? P : c} strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>,
-                onClick: handleSaveVideo,
-              },
-              {
-                id: 'download', label: 'Download', active: false, activeColor: text2, inactiveColor: text1,
-                icon: (_, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
-                onClick: () => console.log('download', title),
-              },
-              {
-                id: 'share', label: 'Share', active: false, activeColor: text2, inactiveColor: text1,
-                icon: (_, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
-                onClick: () => console.log('share', title),
-              },
-            ].map(a => {
-              const iconColor = a.active ? a.activeColor : a.inactiveColor
+        {/* ── Teacher's Question card (replaces Like/Dislike/etc) ── */}
+        <div style={{ padding: '14px 16px', borderBottom: `1px solid ${borderClr}`, background: darkMode ? '#16162a' : '#FAFAFF' }}>
+          {/* Header row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.2" strokeLinecap="round">
+                <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: P, lineHeight: 1 }}>Dr. Amit's Question</div>
+              <div style={{ fontSize: 10, color: text3, marginTop: 2 }}>
+                Pause and attempt · asked at {TEACHER_QUESTION.askedAt}
+              </div>
+            </div>
+            {teacherQAnswer !== null && (
+              <span style={{
+                fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 50,
+                background: teacherQAnswer === TEACHER_QUESTION.correct ? GREENBG : '#FCEBEB',
+                color: teacherQAnswer === TEACHER_QUESTION.correct ? GREEN : '#791F1F',
+              }}>
+                {teacherQAnswer === TEACHER_QUESTION.correct ? '✓ Correct' : '✗ Try again'}
+              </span>
+            )}
+          </div>
+
+          {/* Question text */}
+          <div style={{ fontSize: 13, fontWeight: 600, color: text1, lineHeight: 1.55, marginBottom: 10 }}>
+            {TEACHER_QUESTION.text}
+          </div>
+
+          {/* Options */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {TEACHER_QUESTION.options.map((opt, i) => {
+              const selected = teacherQAnswer === i
+              const isCorrect = i === TEACHER_QUESTION.correct
+              let oBg = darkMode ? '#1e1e30' : 'white', oBorder = borderClr, oColor = text2
+              if (teacherQAnswer !== null) {
+                if (isCorrect) { oBg = '#EAF3DE'; oBorder = '#97C459'; oColor = GREEN }
+                else if (selected) { oBg = '#FCEBEB'; oBorder = '#F09595'; oColor = '#791F1F' }
+              } else if (selected) { oBg = PL; oBorder = P; oColor = PD }
               return (
-                <button
-                  key={a.id} onClick={a.onClick}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 10px' }}
+                <button key={i}
+                  onClick={() => { if (teacherQAnswer === null) setTeacherQAnswer(i) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px',
+                    borderRadius: 10, border: `1.5px solid ${oBorder}`, background: oBg,
+                    color: oColor, fontSize: 13, textAlign: 'left',
+                    cursor: teacherQAnswer === null ? 'pointer' : 'default',
+                  }}
                 >
-                  {a.icon(a.active, iconColor)}
-                  <span style={{ fontSize: 10, color: a.active ? a.activeColor : text2 }}>{a.label}</span>
+                  <span style={{
+                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                    fontSize: 10, fontWeight: 700, lineHeight: 1,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: `1.5px solid ${oBorder}`,
+                    background: teacherQAnswer !== null && (isCorrect || selected)
+                      ? (isCorrect ? GREEN : '#791F1F') : 'transparent',
+                    color: teacherQAnswer !== null && (isCorrect || selected) ? 'white' : oColor,
+                  }}>
+                    {['A', 'B', 'C', 'D'][i]}
+                  </span>
+                  <span style={{ flex: 1 }}>{opt}</span>
+                  {teacherQAnswer !== null && isCorrect && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg>
+                  )}
+                  {teacherQAnswer !== null && selected && !isCorrect && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#791F1F" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  )}
                 </button>
               )
             })}
           </div>
+
+          {/* Explanation */}
+          {teacherQAnswer !== null && (
+            <div style={{ marginTop: 10, padding: '10px 13px', borderRadius: 10, background: '#EAF3DE', border: '1px solid #97C459' }}>
+              <div style={{ fontSize: 12, color: GREEN, lineHeight: 1.6 }}>
+                {TEACHER_QUESTION.explanation}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: `1px solid ${borderClr}` }}>
           {[
-            { id: 'topics',    label: isReturningUser ? 'Topics' : 'Topics Covered' },
+            { id: 'topics',    label: 'Topics' },
             { id: 'resources', label: 'Resources' },
-            { id: 'selfnotes', label: isReturningUser ? 'Notes' : 'Self-Notes' },
-            ...(isReturningUser ? [{ id: 'practice', label: 'Practice' }] : []),
+            { id: 'selfnotes', label: 'Notes' },
+            { id: 'practice',  label: 'Practice' },
           ].map(tab => (
             <button
               key={tab.id} onClick={() => setActiveTab(tab.id)}
@@ -1103,6 +1162,22 @@ export default function VideoPlayer({
                 ) : 'Save notes'}
               </button>
 
+            </div>
+          )}
+
+          {activeTab === 'practice' && !isReturningUser && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '36px 0', textAlign: 'center' }}>
+              <div style={{ fontSize: 36, marginBottom: 14 }}>📝</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: text1, marginBottom: 8 }}>Test yourself</div>
+              <div style={{ fontSize: 13, color: text2, lineHeight: 1.6, marginBottom: 24, maxWidth: 240 }}>
+                {QUIZ_QUESTIONS.length} questions on this video — see how much you've absorbed.
+              </div>
+              <button
+                onClick={() => { setQuizQIndex(0); setQuizAnswers({}); setQuizPhase('questions'); setPhase('quiz') }}
+                className="btn-primary" style={{ padding: '12px 32px' }}
+              >
+                Start Practice
+              </button>
             </div>
           )}
 
