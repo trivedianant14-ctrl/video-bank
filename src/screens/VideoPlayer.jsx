@@ -21,25 +21,49 @@ const QUIZ_QUESTIONS = [
     text: 'Which of the following is the primary pacemaker of the heart?',
     options: ['AV node', 'SA node', 'Bundle of His', 'Purkinje fibers'],
     correct: 1,
-    explanation: 'Right — the SA node fires at 60–100 bpm, the fastest spontaneous rate in the conduction system, making it the natural pacemaker.',
+    explanation: 'The SA node fires at 60–100 bpm — the fastest intrinsic rate in the conduction system — so it drives the heart\'s rhythm under normal conditions.',
+    optionExplanations: [
+      'The AV node is the secondary pacemaker (40–60 bpm). It takes over only if the SA node fails — it doesn\'t normally initiate rhythm.',
+      'Correct. The SA node fires at 60–100 bpm, the fastest spontaneous rate, so it dominates and sets the heart\'s rhythm.',
+      'The Bundle of His is a conduction pathway that carries impulses from the AV node to the ventricles. It doesn\'t generate rhythm on its own.',
+      'Purkinje fibers distribute impulses to ventricular muscle. Their intrinsic escape rate is only 20–40 bpm — a last-resort backup, not a pacemaker.',
+    ],
   },
   {
     text: 'The mitral valve separates which two chambers?',
     options: ['Right atrium and right ventricle', 'Left atrium and left ventricle', 'Left ventricle and aorta', 'Right ventricle and pulmonary artery'],
     correct: 1,
-    explanation: 'The mitral (bicuspid) valve sits between the left atrium and left ventricle. It prevents backflow during ventricular systole.',
+    explanation: 'The mitral (bicuspid) valve sits at the left atrioventricular junction and prevents backflow from the left ventricle into the left atrium during systole.',
+    optionExplanations: [
+      'Those two chambers are separated by the tricuspid valve — on the right side of the heart, not the left.',
+      'Correct. The mitral (bicuspid) valve sits between the left atrium and left ventricle, preventing backflow during ventricular systole.',
+      'That junction is guarded by the aortic (semilunar) valve, which controls blood leaving the left ventricle into the aorta.',
+      'That junction is controlled by the pulmonary valve, which regulates blood flowing from the right ventricle into the pulmonary artery.',
+    ],
   },
   {
     text: 'Which layer of the heart wall is responsible for contraction?',
     options: ['Epicardium', 'Pericardium', 'Myocardium', 'Endocardium'],
     correct: 2,
-    explanation: 'The myocardium is the thick muscular middle layer whose coordinated contraction generates the force to pump blood.',
+    explanation: 'The myocardium is the thick middle muscular layer. Its coordinated contraction — powered by cardiac muscle fibres — generates the force that pumps blood.',
+    optionExplanations: [
+      'The epicardium is the outermost, protective layer of the heart wall. It contains connective tissue and fat but is not contractile.',
+      'The pericardium is the fibrous sac surrounding the entire heart — not one of the wall layers. It provides protection and anchors the heart.',
+      'Correct. The myocardium is the thick muscular middle layer. Its specialised cardiac muscle cells contract in a coordinated wave to pump blood.',
+      'The endocardium is the smooth inner lining of the heart chambers. It reduces friction as blood flows through — it has no contractile function.',
+    ],
   },
   {
     text: 'Absent P waves with an irregularly irregular R-R interval most likely indicates:',
     options: ['Ventricular fibrillation', 'Atrial fibrillation', 'Third-degree heart block', 'Sinus tachycardia'],
     correct: 1,
-    explanation: 'Absent P waves with an irregularly irregular rhythm is the hallmark ECG pattern of atrial fibrillation — chaotic atrial activity replaces organised P waves.',
+    explanation: 'In atrial fibrillation, chaotic atrial firing replaces organised P waves, and the AV node is bombarded irregularly — producing the hallmark irregularly irregular rhythm.',
+    optionExplanations: [
+      'Ventricular fibrillation produces a chaotic, undulating ECG with no recognisable QRS complexes — not a structured irregular pattern. It\'s immediately life-threatening.',
+      'Correct. AF eliminates organised P waves (replaced by fibrillatory baseline) and gives an irregularly irregular R-R interval — the classic ECG signature.',
+      'Third-degree (complete) heart block shows regular P waves and regular QRS complexes — but they\'re dissociated from each other. Both intervals are regular, not irregular.',
+      'Sinus tachycardia has normal, regular P waves before every QRS and a consistently fast but regular rate. The R-R interval is uniform.',
+    ],
   },
 ]
 
@@ -108,6 +132,10 @@ export default function VideoPlayer({
   const [quizQIndex, setQuizQIndex] = useState(0)
   const [quizAnswers, setQuizAnswers] = useState({})
   const [quizPhase, setQuizPhase] = useState('questions')
+  const [savedQuestions, setSavedQuestions] = useState(new Set())
+  const [questionTags, setQuestionTags] = useState({})
+  const [showMarkMenu, setShowMarkMenu] = useState(false)
+  const [showImageViewer, setShowImageViewer] = useState(null)
 
   const bg = darkMode ? '#0d0d1a' : 'white'
   const cardBg = darkMode ? '#1e1e30' : BG2
@@ -261,7 +289,17 @@ export default function VideoPlayer({
           </button>
           <span style={{ fontSize: 15, fontWeight: 700, color: text1, flex: 1 }}>Quick Check</span>
           {quizPhase === 'questions' && (
-            <span style={{ fontSize: 12, color: text3 }}>{quizQIndex + 1} / {QUIZ_QUESTIONS.length}</span>
+            <>
+              <button
+                onClick={() => setSavedQuestions(prev => { const s = new Set(prev); s.has(quizQIndex) ? s.delete(quizQIndex) : s.add(quizQIndex); return s })}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill={savedQuestions.has(quizQIndex) ? P : 'none'} stroke={savedQuestions.has(quizQIndex) ? P : text3} strokeWidth="1.8" strokeLinecap="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
+                </svg>
+              </button>
+              <span style={{ fontSize: 12, color: text3 }}>{quizQIndex + 1} / {QUIZ_QUESTIONS.length}</span>
+            </>
           )}
         </div>
 
@@ -278,6 +316,19 @@ export default function VideoPlayer({
                 {currentQuizQ.text}
               </div>
 
+              {/* Optional question image */}
+              {currentQuizQ.image && (
+                <div
+                  onClick={() => setShowImageViewer(currentQuizQ.image)}
+                  style={{ marginBottom: 16, borderRadius: 12, overflow: 'hidden', border: `1px solid ${borderClr}`, cursor: 'zoom-in', position: 'relative' }}
+                >
+                  <img src={currentQuizQ.image} alt="Question diagram" style={{ width: '100%', display: 'block', maxHeight: 180, objectFit: 'contain', background: cardBg }} />
+                  <div style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.5)', borderRadius: 6, padding: '3px 8px', fontSize: 10, color: 'white', fontWeight: 600 }}>
+                    Tap to zoom
+                  </div>
+                </div>
+              )}
+
               {currentQuizQ.options.map((opt, i) => {
                 const selected = quizAnswers[quizQIndex] === i
                 const isCorrect = i === currentQuizQ.correct
@@ -287,44 +338,95 @@ export default function VideoPlayer({
                   else if (selected) { optBg = '#FCEBEB'; optBorder = '#F09595'; optColor = '#791F1F' }
                 } else if (selected) { optBg = PL; optBorder = P; optColor = PD }
                 return (
-                  <button
-                    key={i}
-                    onClick={() => { if (!hasAnswered) setQuizAnswers(prev => ({ ...prev, [quizQIndex]: i })) }}
-                    style={{
-                      width: '100%', padding: '13px 14px', marginBottom: 10, borderRadius: 12,
-                      border: `1.5px solid ${optBorder}`, background: optBg, color: optColor,
-                      fontSize: 14, fontWeight: selected || (hasAnswered && isCorrect) ? 600 : 400,
-                      textAlign: 'left', cursor: hasAnswered ? 'default' : 'pointer',
-                      display: 'flex', alignItems: 'center', gap: 10,
-                    }}
-                  >
-                    <span style={{
-                      width: 22, height: 22, borderRadius: '50%',
-                      background: hasAnswered && isCorrect ? '#3B6D11' : hasAnswered && selected ? '#791F1F' : 'transparent',
-                      border: `1.5px solid ${optBorder}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0, fontSize: 11, fontWeight: 700,
-                      color: hasAnswered && (isCorrect || selected) ? 'white' : optColor,
-                    }}>
-                      {['A', 'B', 'C', 'D'][i]}
-                    </span>
-                    {opt}
-                  </button>
+                  <div key={i} style={{ marginBottom: hasAnswered ? 6 : 10 }}>
+                    <button
+                      onClick={() => { if (!hasAnswered) setQuizAnswers(prev => ({ ...prev, [quizQIndex]: i })) }}
+                      style={{
+                        width: '100%', padding: '13px 14px',
+                        borderRadius: hasAnswered ? '12px 12px 0 0' : 12,
+                        border: `1.5px solid ${optBorder}`, borderBottom: hasAnswered ? 'none' : `1.5px solid ${optBorder}`,
+                        background: optBg, color: optColor,
+                        fontSize: 14, fontWeight: selected || (hasAnswered && isCorrect) ? 600 : 400,
+                        textAlign: 'left', cursor: hasAnswered ? 'default' : 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 10,
+                      }}
+                    >
+                      <span style={{
+                        width: 22, height: 22, borderRadius: '50%',
+                        background: hasAnswered && isCorrect ? '#3B6D11' : hasAnswered && selected ? '#791F1F' : 'transparent',
+                        border: `1.5px solid ${optBorder}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0, fontSize: 11, fontWeight: 700,
+                        color: hasAnswered && (isCorrect || selected) ? 'white' : optColor,
+                      }}>
+                        {['A', 'B', 'C', 'D'][i]}
+                      </span>
+                      {opt}
+                      {hasAnswered && isCorrect && (
+                        <svg style={{ marginLeft: 'auto', flexShrink: 0 }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg>
+                      )}
+                      {hasAnswered && selected && !isCorrect && (
+                        <svg style={{ marginLeft: 'auto', flexShrink: 0 }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#791F1F" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      )}
+                    </button>
+                    {/* Per-option explanation */}
+                    {hasAnswered && currentQuizQ.optionExplanations?.[i] && (
+                      <div style={{
+                        padding: '8px 14px 10px',
+                        borderRadius: '0 0 12px 12px',
+                        border: `1.5px solid ${optBorder}`, borderTop: `1px dashed ${optBorder}`,
+                        background: isCorrect ? '#f2fae8' : selected ? '#fff5f5' : darkMode ? '#1e1e30' : '#fafafa',
+                        fontSize: 12, color: isCorrect ? '#3B6D11' : selected ? '#791F1F' : text3,
+                        lineHeight: 1.6, marginBottom: 4,
+                      }}>
+                        {currentQuizQ.optionExplanations[i]}
+                      </div>
+                    )}
+                  </div>
                 )
               })}
 
+              {/* Summary + bookmark + mark-as after answering */}
               {hasAnswered && (
-                <div style={{ background: '#EAF3DE', border: '1px solid #97C459', borderRadius: 12, padding: '12px 14px', marginBottom: 20 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#3B6D11', marginBottom: 4 }}>
-                    {quizAnswers[quizQIndex] === currentQuizQ.correct ? 'Correct!' : 'Not quite —'}
+                <div style={{ marginTop: 10, marginBottom: 16 }}>
+                  {/* Correct answer summary */}
+                  <div style={{ background: '#EAF3DE', border: '1px solid #97C459', borderRadius: 12, padding: '12px 14px', marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#3B6D11', marginBottom: 4 }}>
+                      {quizAnswers[quizQIndex] === currentQuizQ.correct ? '✓ Correct — here\'s why:' : '✗ Not quite — the correct answer:'}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#3B6D11', lineHeight: 1.6 }}>{currentQuizQ.explanation}</div>
                   </div>
-                  <div style={{ fontSize: 13, color: '#3B6D11', lineHeight: 1.6 }}>{currentQuizQ.explanation}</div>
+
+                  {/* Mark as row */}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontSize: 11, color: text3, fontWeight: 600, flexShrink: 0 }}>Mark as:</span>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {['Important', 'Tricky', 'Missed', 'Didn\'t know'].map(tag => {
+                        const isActive = questionTags[quizQIndex] === tag
+                        return (
+                          <button
+                            key={tag}
+                            onClick={() => setQuestionTags(prev => ({ ...prev, [quizQIndex]: isActive ? null : tag }))}
+                            style={{
+                              padding: '5px 10px', borderRadius: 50, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                              border: `1.5px solid ${isActive ? P : borderClr}`,
+                              background: isActive ? PL : 'transparent',
+                              color: isActive ? PD : text3,
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            {tag}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
                 </div>
               )}
 
               {hasAnswered && (
                 <button
-                  onClick={() => isLastQ ? setQuizPhase('result') : setQuizQIndex(i => i + 1)}
+                  onClick={() => { setShowMarkMenu(false); isLastQ ? setQuizPhase('result') : setQuizQIndex(i => i + 1) }}
                   className="btn-primary"
                   style={{ width: '100%', marginBottom: 20 }}
                 >
@@ -390,6 +492,33 @@ export default function VideoPlayer({
             </>
           )}
         </div>
+
+        {/* ── IMAGE VIEWER MODAL ── */}
+        {showImageViewer && (
+          <div
+            onClick={() => setShowImageViewer(null)}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300 }}
+          >
+            <button
+              onClick={() => setShowImageViewer(null)}
+              style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white', fontSize: 18 }}
+            >
+              ×
+            </button>
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth: '90%', maxHeight: '80%', overflow: 'auto', touchAction: 'pinch-zoom' }}
+            >
+              <img
+                src={showImageViewer} alt="Zoomed diagram"
+                style={{ width: '100%', borderRadius: 8, display: 'block', touchAction: 'pinch-zoom' }}
+              />
+            </div>
+            <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', fontSize: 11, color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap' }}>
+              Pinch to zoom · Tap outside to close
+            </div>
+          </div>
+        )}
       </div>
     )
   }
