@@ -226,6 +226,8 @@ export default function VideoPlayer({
   const currentTime = `${Math.floor(currentSecs / 60)}:${String(currentSecs % 60).padStart(2, '0')}`
   const teacherQActive = displayProgress >= TEACHER_QUESTION.askedAtSecs / TOTAL_DURATION
     && displayProgress < TEACHER_QUESTION.endsAtSecs / TOTAL_DURATION
+  // In fullscreen every overlay (gear, ?, progress, time) stays visible regardless of tap state
+  const ctrlsVisible = isFullscreen || showControls
 
   // Simulate playback
   useEffect(() => {
@@ -736,15 +738,15 @@ export default function VideoPlayer({
         onClick={() => setShowControls(c => !c)}
         style={{ background: '#0d0d1a', flexShrink: 0, position: 'relative', width: '100%', aspectRatio: isFullscreen ? undefined : '16/9', flex: isFullscreen ? 1 : undefined, cursor: 'pointer', overflow: 'hidden' }}
       >
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%)', pointerEvents: 'none', opacity: showControls ? 1 : 0, transition: 'opacity 0.22s' }} />
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%)', pointerEvents: 'none', opacity: ctrlsVisible ? 1 : 0, transition: 'opacity 0.22s' }} />
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '45%', background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)', pointerEvents: 'none' }} />
 
         {/* Top bar: back · EN/HI · ? · gear */}
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, padding: '10px 12px',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          opacity: showControls ? 1 : 0, transition: 'opacity 0.22s',
-          pointerEvents: showControls ? 'auto' : 'none',
+          opacity: ctrlsVisible ? 1 : 0, transition: 'opacity 0.22s',
+          pointerEvents: ctrlsVisible ? 'auto' : 'none',
         }}>
           <button
             onClick={e => { e.stopPropagation(); navigate('prevideoscreen') }}
@@ -791,8 +793,8 @@ export default function VideoPlayer({
         <div style={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
           display: 'flex', alignItems: 'center', gap: 36,
-          opacity: showControls ? 1 : 0, transition: 'opacity 0.22s',
-          pointerEvents: showControls ? 'auto' : 'none',
+          opacity: ctrlsVisible ? 1 : 0, transition: 'opacity 0.22s',
+          pointerEvents: ctrlsVisible ? 'auto' : 'none',
         }}>
           <button
             onClick={e => { e.stopPropagation(); seekBy(-seekInterval) }}
@@ -832,14 +834,14 @@ export default function VideoPlayer({
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 12px 10px' }}>
           <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            marginBottom: 6, opacity: showControls ? 1 : 0, transition: 'opacity 0.22s',
-            pointerEvents: showControls ? 'auto' : 'none',
+            marginBottom: 6, opacity: ctrlsVisible ? 1 : 0, transition: 'opacity 0.22s',
+            pointerEvents: ctrlsVisible ? 'auto' : 'none',
           }}>
             <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>{currentTime}</span>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>12:00</span>
               <button
-                onClick={e => { e.stopPropagation(); setIsFullscreen(f => !f) }}
+                onClick={e => { e.stopPropagation(); setIsFullscreen(f => !f); setShowControls(true) }}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.65)', display: 'flex' }}
               >
                 {isFullscreen ? (
@@ -858,10 +860,10 @@ export default function VideoPlayer({
           </div>
 
           <div style={{ position: 'relative', height: 14, display: 'flex', alignItems: 'center' }}>
-            <div style={{ position: 'absolute', left: 0, right: 0, height: showControls ? 3 : 2, background: 'rgba(255,255,255,0.25)', borderRadius: 2, transition: 'height 0.15s' }}>
+            <div style={{ position: 'absolute', left: 0, right: 0, height: ctrlsVisible ? 3 : 2, background: 'rgba(255,255,255,0.25)', borderRadius: 2, transition: 'height 0.15s' }}>
               <div style={{ height: '100%', width: `${displayProgress * 100}%`, background: P, borderRadius: 2 }} />
             </div>
-            {showControls && (
+            {ctrlsVisible && (
               <div style={{ position: 'absolute', left: `calc(${displayProgress * 100}% - 6px)`, width: 12, height: 12, borderRadius: '50%', background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.5)', pointerEvents: 'none' }} />
             )}
           </div>
