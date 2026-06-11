@@ -24,6 +24,7 @@ const TOPICS_COVERED = [
 const TEACHER_QUESTION = {
   askedAt: '6:30',
   askedAtSecs: 390,
+  endsAtSecs: 555,
   text: 'Which of the following initiates the heartbeat?',
   options: ['AV Node', 'SA Node', 'Bundle of His', 'Purkinje Fibers'],
   correct: 1,
@@ -139,6 +140,7 @@ export default function VideoPlayer({
   const [displayProgress, setDisplayProgress] = useState(0)
   const completionTriggeredRef = useRef(false)
   const [showControls, setShowControls] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   const [showSettings, setShowSettings] = useState(false)
   const [showCompletionOverlay, setShowCompletionOverlay] = useState(false)
@@ -209,6 +211,8 @@ export default function VideoPlayer({
 
   const currentSecs = Math.floor(displayProgress * TOTAL_DURATION)
   const currentTime = `${Math.floor(currentSecs / 60)}:${String(currentSecs % 60).padStart(2, '0')}`
+  const teacherQActive = displayProgress >= TEACHER_QUESTION.askedAtSecs / TOTAL_DURATION
+    && displayProgress < TEACHER_QUESTION.endsAtSecs / TOTAL_DURATION
 
   // Simulate playback
   useEffect(() => {
@@ -717,7 +721,7 @@ export default function VideoPlayer({
       {/* VIDEO AREA */}
       <div
         onClick={() => setShowControls(c => !c)}
-        style={{ background: '#0d0d1a', flexShrink: 0, position: 'relative', width: '100%', aspectRatio: '16/9', cursor: 'pointer', overflow: 'hidden' }}
+        style={{ background: '#0d0d1a', flexShrink: 0, position: 'relative', width: '100%', aspectRatio: isFullscreen ? undefined : '16/9', flex: isFullscreen ? 1 : undefined, cursor: 'pointer', overflow: 'hidden' }}
       >
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%)', pointerEvents: 'none', opacity: showControls ? 1 : 0, transition: 'opacity 0.22s' }} />
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '45%', background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)', pointerEvents: 'none' }} />
@@ -822,13 +826,20 @@ export default function VideoPlayer({
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>12:00</span>
               <button
-                onClick={e => e.stopPropagation()}
+                onClick={e => { e.stopPropagation(); setIsFullscreen(f => !f) }}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.65)', display: 'flex' }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <polyline points="15,3 21,3 21,9"/><polyline points="9,21 3,21 3,15"/>
-                  <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
-                </svg>
+                {isFullscreen ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <polyline points="4,14 10,14 10,20"/><polyline points="20,10 14,10 14,4"/>
+                    <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <polyline points="15,3 21,3 21,9"/><polyline points="9,21 3,21 3,15"/>
+                    <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                  </svg>
+                )}
               </button>
             </div>
           </div>
@@ -888,6 +899,31 @@ export default function VideoPlayer({
             </div>
           </div>
         )}
+
+        {/* Landscape nudge — tap to exit fullscreen and attempt question */}
+        {isFullscreen && teacherQActive && (
+          <div
+            onClick={e => { e.stopPropagation(); setIsFullscreen(false) }}
+            style={{
+              position: 'absolute', top: 56, right: 12, zIndex: 15,
+              background: 'rgba(12,12,32,0.84)',
+              border: '1px solid rgba(255,255,255,0.18)',
+              borderRadius: 10, padding: '7px 11px 7px 9px',
+              display: 'flex', alignItems: 'center', gap: 8,
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ width: 24, height: 24, borderRadius: '50%', background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.5" strokeLinecap="round">
+                <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'white', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Dr. Amit's Question</div>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', marginTop: 1, whiteSpace: 'nowrap' }}>Tap to attempt ↙</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Doubt toast */}
@@ -916,7 +952,7 @@ export default function VideoPlayer({
       )}
 
       {/* SCROLLABLE CONTENT */}
-      <div className="scroll" style={{ flex: 1, overflowY: 'auto', background: bg }}>
+      <div className="scroll" style={{ flex: 1, overflowY: 'auto', background: bg, display: isFullscreen ? 'none' : undefined }}>
 
         {/* Title + meta */}
         <div style={{ padding: '12px 16px', borderBottom: `1px solid ${borderClr}` }}>
@@ -925,9 +961,9 @@ export default function VideoPlayer({
         </div>
 
         {/* ── Action row OR Teacher Question (mutually exclusive) ── */}
-        {displayProgress < TEACHER_QUESTION.askedAtSecs / TOTAL_DURATION ? (
+        {!teacherQActive ? (
 
-          /* Normal action buttons — shown before teacher question timestamp */
+          /* Normal action buttons — shown outside teacher question window (before 6:30 and after 9:15) */
           <div style={{ padding: '12px 0', borderBottom: `1px solid ${borderClr}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-around' }}>
               {[
@@ -1360,7 +1396,7 @@ export default function VideoPlayer({
       {/* REPORT BAR */}
       <button
         onClick={() => setShowReportModal(true)}
-        style={{ flexShrink: 0, width: '100%', padding: '13px', background: GREENBG, borderTop: `1px solid ${GREENBORDER}`, borderLeft: 'none', borderRight: 'none', borderBottom: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: GREEN, textAlign: 'center' }}
+        style={{ flexShrink: 0, width: '100%', padding: '13px', background: GREENBG, borderTop: `1px solid ${GREENBORDER}`, borderLeft: 'none', borderRight: 'none', borderBottom: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: GREEN, textAlign: 'center', display: isFullscreen ? 'none' : 'block' }}
       >
         Having an issue? Tap to report
       </button>
