@@ -135,6 +135,13 @@ export default function VideoPlayer({
   const [notesSaved, setNotesSaved] = useState(false)
   const notesTimerRef = useRef(null)
 
+  const [capturedPhoto, setCapturedPhoto] = useState(null)
+  const captureInputRef = useRef(null)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordedVoice, setRecordedVoice] = useState(null) // { duration: '0:12' }
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
+  const recordingIntervalRef = useRef(null)
+
   const [quizQIndex, setQuizQIndex] = useState(0)
   const [quizAnswers, setQuizAnswers] = useState({})
   const [quizPhase, setQuizPhase] = useState('questions')
@@ -199,8 +206,41 @@ export default function VideoPlayer({
     setSelfNotes(val)
     setNotesSaved(false)
     if (notesTimerRef.current) clearTimeout(notesTimerRef.current)
-    notesTimerRef.current = setTimeout(() => setNotesSaved(true), 1200)
   }
+
+  const handleCapturePhoto = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => { setCapturedPhoto(ev.target.result); setNotesSaved(false) }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const handleVoiceToggle = () => {
+    if (isRecording) {
+      clearInterval(recordingIntervalRef.current)
+      const mins = Math.floor(recordingSeconds / 60)
+      const secs = recordingSeconds % 60
+      setRecordedVoice({ duration: `${mins}:${String(secs).padStart(2, '0')}` })
+      setIsRecording(false)
+      setRecordingSeconds(0)
+      setNotesSaved(false)
+    } else {
+      setRecordingSeconds(0)
+      setIsRecording(true)
+      recordingIntervalRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000)
+    }
+  }
+
+  const hasAnyNotes = selfNotes.trim() || capturedPhoto || recordedVoice
+
+  const handleSaveNotes = () => {
+    if (notesTimerRef.current) clearTimeout(notesTimerRef.current)
+    setNotesSaved(true)
+  }
+
+  const fmtRecording = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
   const handleSaveVideo = () => {
     if (isSaved) {
@@ -951,53 +991,118 @@ export default function VideoPlayer({
           )}
 
           {activeTab === 'selfnotes' && (
-            <div>
-              <div style={{ position: 'relative', marginBottom: 4 }}>
-                <textarea
-                  value={selfNotes} onChange={e => handleSelfNotesChange(e.target.value)}
-                  placeholder="Type your notes here…"
-                  style={{ width: '100%', minHeight: 120, padding: '12px 14px', border: `1px solid ${borderClr}`, borderRadius: 12, fontSize: 13, color: text1, background: cardBg, resize: 'none', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
-                />
-                <div style={{ position: 'absolute', bottom: 10, right: 12, fontSize: 10, color: GREEN, fontWeight: 600, opacity: selfNotes.length > 0 && notesSaved ? 1 : 0, transition: 'opacity 0.3s' }}>
-                  Saved
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+              {/* Hidden file input */}
+              <input ref={captureInputRef} type="file" accept="image/*" capture="environment" onChange={handleCapturePhoto} style={{ display: 'none' }} />
+
+              {/* Typed notes */}
+              <textarea
+                value={selfNotes} onChange={e => handleSelfNotesChange(e.target.value)}
+                placeholder="Type your notes here…"
+                style={{ width: '100%', minHeight: 110, padding: '12px 14px', border: `1px solid ${borderClr}`, borderRadius: 12, fontSize: 13, color: text1, background: cardBg, resize: 'none', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+              />
+
+              {/* Captured photo preview */}
+              {capturedPhoto && (
+                <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: `1px solid ${borderClr}` }}>
+                  <img src={capturedPhoto} alt="Handwritten notes" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }} />
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%)' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'white' }}>📷 Handwritten notes</span>
+                    <button
+                      onClick={() => { setCapturedPhoto(null); setNotesSaved(false) }}
+                      style={{ background: 'rgba(0,0,0,0.4)', border: 'none', borderRadius: '50%', width: 22, height: 22, color: 'white', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                    >×</button>
+                  </div>
+                  <button
+                    onClick={() => captureInputRef.current?.click()}
+                    style={{ position: 'absolute', bottom: 8, right: 8, padding: '5px 10px', borderRadius: 50, background: 'rgba(0,0,0,0.5)', border: 'none', color: 'white', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Retake
+                  </button>
                 </div>
-              </div>
+              )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
-                <button
-                  onClick={() => { if (notesTimerRef.current) clearTimeout(notesTimerRef.current); setNotesSaved(true) }}
-                  disabled={!selfNotes.trim()}
-                  style={{
-                    padding: '9px 20px', borderRadius: 50,
-                    background: notesSaved ? GREENBG : selfNotes.trim() ? P : borderClr,
-                    border: `1.5px solid ${notesSaved ? GREENBORDER : selfNotes.trim() ? P : borderClr}`,
-                    color: notesSaved ? GREEN : selfNotes.trim() ? 'white' : text3,
-                    fontSize: 13, fontWeight: 600, cursor: selfNotes.trim() ? 'pointer' : 'default',
-                    display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s',
-                  }}
-                >
-                  {notesSaved
-                    ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg> Saved</>
-                    : 'Save notes'}
-                </button>
-              </div>
+              {/* Voice note preview */}
+              {recordedVoice && !isRecording && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, border: `1px solid ${borderClr}`, background: cardBg }}>
+                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill={P}><polygon points="5,3 19,12 5,21"/></svg>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: text1 }}>Voice note</div>
+                    <div style={{ fontSize: 11, color: text3 }}>{recordedVoice.duration}</div>
+                  </div>
+                  <button
+                    onClick={() => { setRecordedVoice(null); setNotesSaved(false) }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: text3, padding: 4 }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0 0 12px' }}>
+              {/* OR divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1, height: 1, background: borderClr }} />
                 <span style={{ fontSize: 11, color: text3, fontWeight: 600 }}>OR</span>
                 <div style={{ flex: 1, height: 1, background: borderClr }} />
               </div>
 
+              {/* Capture & upload | Record voice */}
               <div style={{ display: 'flex', gap: 10 }}>
-                <button style={{ flex: 1, padding: '14px 8px', borderRadius: 12, border: `1.5px dashed ${borderClr}`, background: 'none', color: text2, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={text2} strokeWidth="1.8" strokeLinecap="round"><polyline points="16,16 12,12 8,16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
-                  <span>Capture & upload</span>
+                <button
+                  onClick={() => captureInputRef.current?.click()}
+                  style={{ flex: 1, padding: '14px 8px', borderRadius: 12, border: `1.5px dashed ${capturedPhoto ? P : borderClr}`, background: capturedPhoto ? PL : 'none', color: capturedPhoto ? PD : text2, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
+                  <span>{capturedPhoto ? 'Change photo' : 'Capture & upload'}</span>
                 </button>
-                <button style={{ flex: 1, padding: '14px 8px', borderRadius: 12, border: `1.5px dashed ${borderClr}`, background: 'none', color: text2, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={text2} strokeWidth="1.8" strokeLinecap="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                  <span>Record voice</span>
+
+                <button
+                  onClick={handleVoiceToggle}
+                  style={{ flex: 1, padding: '14px 8px', borderRadius: 12, border: `1.5px dashed ${isRecording ? '#DC2626' : recordedVoice ? P : borderClr}`, background: isRecording ? '#FEF2F2' : recordedVoice ? PL : 'none', color: isRecording ? '#DC2626' : recordedVoice ? PD : text2, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, position: 'relative', overflow: 'hidden' }}
+                >
+                  {isRecording ? (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#DC2626', animation: 'pulse 1s infinite' }} />
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="1.8" strokeLinecap="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                      </div>
+                      <span>{fmtRecording(recordingSeconds)} · Tap to stop</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                      <span>{recordedVoice ? 'Re-record' : 'Record voice'}</span>
+                    </>
+                  )}
                 </button>
               </div>
+
+              {/* Save notes — always at bottom, covers all three input types */}
+              <button
+                onClick={handleSaveNotes}
+                disabled={!hasAnyNotes}
+                style={{
+                  width: '100%', padding: '12px', borderRadius: 50,
+                  background: notesSaved ? GREENBG : hasAnyNotes ? P : borderClr,
+                  border: `1.5px solid ${notesSaved ? GREENBORDER : hasAnyNotes ? P : borderClr}`,
+                  color: notesSaved ? GREEN : hasAnyNotes ? 'white' : text3,
+                  fontSize: 13, fontWeight: 600,
+                  cursor: hasAnyNotes ? 'pointer' : 'default',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  transition: 'all 0.2s',
+                }}
+              >
+                {notesSaved ? (
+                  <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg> Notes saved</>
+                ) : 'Save notes'}
+              </button>
+
             </div>
           )}
 
