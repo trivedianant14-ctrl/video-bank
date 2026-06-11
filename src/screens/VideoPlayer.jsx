@@ -136,6 +136,7 @@ export default function VideoPlayer({
   const [questionTags, setQuestionTags] = useState({})
   const [showMarkMenu, setShowMarkMenu] = useState(false)
   const [showImageViewer, setShowImageViewer] = useState(null)
+  const [expandedResult, setExpandedResult] = useState(null)
 
   const bg = darkMode ? '#0d0d1a' : 'white'
   const cardBg = darkMode ? '#1e1e30' : BG2
@@ -457,19 +458,85 @@ export default function VideoPlayer({
                 <div style={{ textAlign: 'left', marginBottom: 20 }}>
                   {QUIZ_QUESTIONS.map((q, i) => {
                     const correct = quizAnswers[i] === q.correct
+                    const isOpen = expandedResult === i
+                    const accentColor = correct ? '#3B6D11' : '#791F1F'
+                    const accentBg = correct ? '#EAF3DE' : '#FCEBEB'
+                    const accentBorder = correct ? '#97C459' : '#F09595'
+                    const accentBorderLight = correct ? '#c7e8a0' : '#f8bfbf'
                     return (
-                      <div key={i} style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '10px 14px', marginBottom: 6, borderRadius: 10,
-                        background: correct ? '#EAF3DE' : '#FCEBEB',
-                        border: `1px solid ${correct ? '#97C459' : '#F09595'}`,
-                      }}>
-                        <span style={{ fontSize: 12, color: correct ? '#3B6D11' : '#791F1F', flex: 1, lineHeight: 1.4 }}>
-                          Q{i + 1}: {q.text.slice(0, 55)}…
-                        </span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: correct ? '#3B6D11' : '#791F1F' }}>
-                          {correct ? '✓' : '✗'}
-                        </span>
+                      <div key={i} style={{ marginBottom: 8, borderRadius: 12, overflow: 'hidden', border: `1px solid ${accentBorder}` }}>
+                        {/* Row header — always visible, tap to expand */}
+                        <button
+                          onClick={() => setExpandedResult(isOpen ? null : i)}
+                          style={{
+                            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '11px 14px', background: accentBg,
+                            border: 'none', cursor: 'pointer', textAlign: 'left',
+                          }}
+                        >
+                          <span style={{ fontSize: 12, color: accentColor, flex: 1, lineHeight: 1.4, fontWeight: 500 }}>
+                            Q{i + 1}: {q.text}
+                          </span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: accentColor, flexShrink: 0 }}>{correct ? '✓' : '✗'}</span>
+                          <svg
+                            width="14" height="14" viewBox="0 0 24 24" fill="none"
+                            stroke={accentColor} strokeWidth="2.5" strokeLinecap="round"
+                            style={{ flexShrink: 0, transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                          >
+                            <polyline points="6,9 12,15 18,9"/>
+                          </svg>
+                        </button>
+
+                        {/* Expanded: options + explanation */}
+                        {isOpen && (
+                          <div style={{ background: 'white', padding: '12px 14px 14px', borderTop: `1px solid ${accentBorderLight}` }}>
+                            {q.options.map((opt, j) => {
+                              const isCorrectOpt = j === q.correct
+                              const wasSelected = quizAnswers[i] === j
+                              let bg = BG2, border = borderClr, color = text2
+                              if (isCorrectOpt) { bg = '#EAF3DE'; border = '#97C459'; color = '#3B6D11' }
+                              else if (wasSelected) { bg = '#FCEBEB'; border = '#F09595'; color = '#791F1F' }
+                              return (
+                                <div key={j} style={{ marginBottom: 6 }}>
+                                  <div style={{
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    padding: '9px 12px',
+                                    borderRadius: q.optionExplanations ? '8px 8px 0 0' : 8,
+                                    background: bg, border: `1px solid ${border}`,
+                                    borderBottom: q.optionExplanations ? 'none' : `1px solid ${border}`,
+                                  }}>
+                                    <span style={{
+                                      width: 20, height: 20, borderRadius: '50%', flexShrink: 0, fontSize: 10, fontWeight: 700,
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      background: isCorrectOpt ? '#3B6D11' : wasSelected ? '#791F1F' : 'transparent',
+                                      border: `1.5px solid ${border}`,
+                                      color: (isCorrectOpt || wasSelected) ? 'white' : color,
+                                    }}>
+                                      {['A', 'B', 'C', 'D'][j]}
+                                    </span>
+                                    <span style={{ fontSize: 12, color, fontWeight: isCorrectOpt || wasSelected ? 600 : 400, flex: 1 }}>{opt}</span>
+                                    {isCorrectOpt && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg>}
+                                    {wasSelected && !isCorrectOpt && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#791F1F" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>}
+                                  </div>
+                                  {q.optionExplanations?.[j] && (
+                                    <div style={{
+                                      padding: '7px 12px 9px', fontSize: 11, lineHeight: 1.6,
+                                      borderRadius: '0 0 8px 8px', border: `1px solid ${border}`, borderTop: `1px dashed ${border}`,
+                                      background: isCorrectOpt ? '#f2fae8' : wasSelected ? '#fff5f5' : '#fafafa',
+                                      color: isCorrectOpt ? '#3B6D11' : wasSelected ? '#791F1F' : T3,
+                                    }}>
+                                      {q.optionExplanations[j]}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                            <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, background: '#EAF3DE', border: '1px solid #97C459' }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: '#3B6D11', marginBottom: 3 }}>Key takeaway</div>
+                              <div style={{ fontSize: 12, color: '#3B6D11', lineHeight: 1.6 }}>{q.explanation}</div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
