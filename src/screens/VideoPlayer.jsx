@@ -1,0 +1,855 @@
+import { useState, useEffect, useRef } from 'react'
+
+const COMPLETION_THRESHOLD = 0.95
+const PASS_THRESHOLD = 0.66
+const TOTAL_DURATION = 720 // 12 min placeholder
+
+const P = '#534AB7', PL = '#EEEDFE', PD = '#3C3489'
+const T1 = '#1a1a2e', T2 = '#5a5a78', T3 = '#9898b0', BD = '#e8e8f2', BG2 = '#f5f5fb'
+const GREEN = '#3B6D11', GREENBG = '#EAF3DE', GREENBORDER = '#A5D6A7'
+
+const TOPICS_COVERED = [
+  { name: 'Introduction & Overview', ts: '0:00' },
+  { name: 'Cardiac Anatomy', ts: '2:45' },
+  { name: 'Conduction System', ts: '6:30' },
+  { name: 'Cardiac Cycle', ts: '9:15' },
+  { name: 'Clinical Correlations', ts: '11:00' },
+]
+
+const QUIZ_QUESTIONS = [
+  {
+    text: 'Which of the following is the primary pacemaker of the heart?',
+    options: ['AV node', 'SA node', 'Bundle of His', 'Purkinje fibers'],
+    correct: 1,
+    explanation: 'Right — the SA node fires at 60–100 bpm, the fastest spontaneous rate in the conduction system, making it the natural pacemaker.',
+  },
+  {
+    text: 'The mitral valve separates which two chambers?',
+    options: ['Right atrium and right ventricle', 'Left atrium and left ventricle', 'Left ventricle and aorta', 'Right ventricle and pulmonary artery'],
+    correct: 1,
+    explanation: 'The mitral (bicuspid) valve sits between the left atrium and left ventricle. It prevents backflow during ventricular systole.',
+  },
+  {
+    text: 'Which layer of the heart wall is responsible for contraction?',
+    options: ['Epicardium', 'Pericardium', 'Myocardium', 'Endocardium'],
+    correct: 2,
+    explanation: 'The myocardium is the thick muscular middle layer whose coordinated contraction generates the force to pump blood.',
+  },
+  {
+    text: 'Absent P waves with an irregularly irregular R-R interval most likely indicates:',
+    options: ['Ventricular fibrillation', 'Atrial fibrillation', 'Third-degree heart block', 'Sinus tachycardia'],
+    correct: 1,
+    explanation: 'Absent P waves with an irregularly irregular rhythm is the hallmark ECG pattern of atrial fibrillation — chaotic atrial activity replaces organised P waves.',
+  },
+]
+
+const Toggle = ({ value, onChange }) => (
+  <div
+    onClick={() => onChange(!value)}
+    style={{
+      width: 40, height: 22, borderRadius: 11,
+      background: value ? P : BD,
+      position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0,
+    }}
+  >
+    <div style={{
+      position: 'absolute', top: 3, left: value ? 21 : 3, width: 16, height: 16,
+      borderRadius: '50%', background: 'white', transition: 'left 0.2s',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+    }} />
+  </div>
+)
+
+export default function VideoPlayer({
+  navigate, currentVideo,
+  savedVideos = [], saveVideo, unsaveVideo,
+  savedResources = [], saveResource, unsaveResource,
+}) {
+  const [phase, setPhase] = useState('player')
+  const [isPlaying, setIsPlaying] = useState(false)
+  const progressRef = useRef(0)
+  const [displayProgress, setDisplayProgress] = useState(0)
+  const completionTriggeredRef = useRef(false)
+  const [showControls, setShowControls] = useState(true)
+
+  const [showSettings, setShowSettings] = useState(false)
+  const [showCompletionOverlay, setShowCompletionOverlay] = useState(false)
+  const [countdown, setCountdown] = useState(5)
+  const [showDoubtPopup, setShowDoubtPopup] = useState(false)
+  const [showDoubtToast, setShowDoubtToast] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [showResourceModal, setShowResourceModal] = useState(null)
+
+  const [liked, setLiked] = useState(false)
+  const [disliked, setDisliked] = useState(false)
+  const [showDislikeFeedback, setShowDislikeFeedback] = useState(false)
+  const [dislikeFeedbackText, setDislikeFeedbackText] = useState('')
+
+  const [language, setLanguage] = useState('EN')
+  const [darkMode, setDarkMode] = useState(false)
+  const [subtitlesOn, setSubtitlesOn] = useState(true)
+  const [playbackSpeed, setPlaybackSpeed] = useState('1x')
+  const [seekInterval, setSeekInterval] = useState(10)
+  const [videoQuality, setVideoQuality] = useState('Auto')
+
+  const [activeTab, setActiveTab] = useState('topics')
+  const [selfNotes, setSelfNotes] = useState('')
+  const [notesSaved, setNotesSaved] = useState(false)
+  const notesTimerRef = useRef(null)
+
+  const [quizQIndex, setQuizQIndex] = useState(0)
+  const [quizAnswers, setQuizAnswers] = useState({})
+  const [quizPhase, setQuizPhase] = useState('questions')
+
+  const bg = darkMode ? '#0d0d1a' : 'white'
+  const cardBg = darkMode ? '#1a1a2e' : BG2
+  const borderClr = darkMode ? '#2a2a40' : BD
+  const text1 = darkMode ? '#e8e8f2' : T1
+  const text2 = darkMode ? '#9898b0' : T2
+  const text3 = darkMode ? '#5a5a78' : T3
+
+  const videoId = currentVideo?.id || 'cv-part1'
+  const title = currentVideo?.title || 'Cardiovascular System — Part 1'
+  const uploadDate = currentVideo?.uploadDate || 'Jan 12, 2025'
+  const isSaved = savedVideos.some(v => v.id === videoId)
+  const isSlidesSaved = savedResources.some(r => r.videoId === videoId && r.type === 'slides')
+  const isNotesSaved = savedResources.some(r => r.videoId === videoId && r.type === 'notes')
+
+  const currentSecs = Math.floor(displayProgress * TOTAL_DURATION)
+  const currentTime = `${Math.floor(currentSecs / 60)}:${String(currentSecs % 60).padStart(2, '0')}`
+
+  // Simulate playback
+  useEffect(() => {
+    if (!isPlaying) return
+    const t = setInterval(() => {
+      const next = Math.min(progressRef.current + 0.005, 1)
+      progressRef.current = next
+      setDisplayProgress(next)
+      if (next >= COMPLETION_THRESHOLD && !completionTriggeredRef.current) {
+        completionTriggeredRef.current = true
+        setIsPlaying(false)
+        setShowCompletionOverlay(true)
+        setCountdown(5)
+      }
+    }, 200)
+    return () => clearInterval(t)
+  }, [isPlaying])
+
+  // Completion countdown → auto-advance to quiz
+  useEffect(() => {
+    if (!showCompletionOverlay) return
+    if (countdown <= 0) { setShowCompletionOverlay(false); setPhase('quiz'); return }
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [showCompletionOverlay, countdown])
+
+  // Doubt toast auto-dismiss
+  useEffect(() => {
+    if (!showDoubtToast) return
+    const t = setTimeout(() => setShowDoubtToast(false), 3000)
+    return () => clearTimeout(t)
+  }, [showDoubtToast])
+
+  const handleSelfNotesChange = (val) => {
+    setSelfNotes(val)
+    setNotesSaved(false)
+    if (notesTimerRef.current) clearTimeout(notesTimerRef.current)
+    notesTimerRef.current = setTimeout(() => setNotesSaved(true), 1200)
+  }
+
+  const handleSaveVideo = () => {
+    if (isSaved) { unsaveVideo?.(videoId) }
+    else { saveVideo?.({ id: videoId, title, subject: currentVideo?.subject || 'Applied Anatomy', savedAt: Date.now() }) }
+  }
+
+  const handleSaveResource = (type) => {
+    const saved = type === 'slides' ? isSlidesSaved : isNotesSaved
+    if (saved) { unsaveResource?.(`${videoId}-${type}`) }
+    else {
+      saveResource?.({
+        id: `${videoId}-${type}`, videoId, type,
+        videoTitle: title, subject: currentVideo?.subject || 'Applied Anatomy',
+        savedAt: Date.now(),
+      })
+    }
+  }
+
+  const handleLike = () => { setLiked(l => !l); if (!liked) setDisliked(false) }
+  const handleDislike = () => {
+    if (!disliked) { setDisliked(true); setLiked(false); setShowDislikeFeedback(true) }
+    else { setDisliked(false) }
+  }
+
+  const seekBy = (delta) => {
+    const next = Math.max(0, Math.min(1, progressRef.current + delta / TOTAL_DURATION))
+    progressRef.current = next
+    setDisplayProgress(next)
+  }
+
+  const seekToTimestamp = (ts) => {
+    const parts = ts.split(':')
+    const secs = parseInt(parts[0]) * 60 + parseInt(parts[1])
+    progressRef.current = secs / TOTAL_DURATION
+    setDisplayProgress(progressRef.current)
+  }
+
+  const handleWatchAgain = () => {
+    progressRef.current = 0; completionTriggeredRef.current = false
+    setDisplayProgress(0); setPhase('player')
+    setQuizQIndex(0); setQuizAnswers({}); setQuizPhase('questions')
+    setShowCompletionOverlay(false); setIsPlaying(false)
+  }
+
+  const currentQuizQ = QUIZ_QUESTIONS[quizQIndex]
+  const hasAnswered = quizAnswers[quizQIndex] !== undefined
+  const isLastQ = quizQIndex === QUIZ_QUESTIONS.length - 1
+  const quizScore = Object.keys(quizAnswers).filter(i => quizAnswers[+i] === QUIZ_QUESTIONS[+i].correct).length
+  const passed = quizScore / QUIZ_QUESTIONS.length >= PASS_THRESHOLD
+
+  // ─── QUIZ PHASE ───────────────────────────────────────────────────────────
+  if (phase === 'quiz') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: bg }}>
+        <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${borderClr}`, flexShrink: 0 }}>
+          <button
+            onClick={() => { setPhase('player'); setQuizQIndex(0); setQuizAnswers({}); setQuizPhase('questions') }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: text1, display: 'flex' }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg>
+          </button>
+          <span style={{ fontSize: 15, fontWeight: 700, color: text1, flex: 1 }}>Quick Check</span>
+          {quizPhase === 'questions' && (
+            <span style={{ fontSize: 12, color: text3 }}>{quizQIndex + 1} / {QUIZ_QUESTIONS.length}</span>
+          )}
+        </div>
+
+        <div className="scroll" style={{ flex: 1, overflowY: 'auto', padding: '20px 16px' }}>
+          {quizPhase === 'questions' ? (
+            <>
+              {/* Progress dots */}
+              <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+                {QUIZ_QUESTIONS.map((_, i) => (
+                  <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= quizQIndex ? P : borderClr, opacity: i < quizQIndex ? 0.4 : 1 }} />
+                ))}
+              </div>
+
+              <div style={{ fontSize: 15, fontWeight: 600, color: text1, lineHeight: 1.6, marginBottom: 20 }}>
+                {currentQuizQ.text}
+              </div>
+
+              {currentQuizQ.options.map((opt, i) => {
+                const selected = quizAnswers[quizQIndex] === i
+                const isCorrect = i === currentQuizQ.correct
+                let optBg = cardBg, optBorder = borderClr, optColor = text2
+                if (hasAnswered) {
+                  if (isCorrect) { optBg = '#EAF3DE'; optBorder = '#97C459'; optColor = '#3B6D11' }
+                  else if (selected) { optBg = '#FCEBEB'; optBorder = '#F09595'; optColor = '#791F1F' }
+                } else if (selected) { optBg = PL; optBorder = P; optColor = PD }
+                return (
+                  <button
+                    key={i}
+                    onClick={() => { if (!hasAnswered) setQuizAnswers(prev => ({ ...prev, [quizQIndex]: i })) }}
+                    style={{
+                      width: '100%', padding: '13px 14px', marginBottom: 10, borderRadius: 12,
+                      border: `1.5px solid ${optBorder}`, background: optBg, color: optColor,
+                      fontSize: 14, fontWeight: selected || (hasAnswered && isCorrect) ? 600 : 400,
+                      textAlign: 'left', cursor: hasAnswered ? 'default' : 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 10,
+                    }}
+                  >
+                    <span style={{
+                      width: 22, height: 22, borderRadius: '50%',
+                      background: hasAnswered && isCorrect ? '#3B6D11' : hasAnswered && selected ? '#791F1F' : 'transparent',
+                      border: `1.5px solid ${optBorder}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0, fontSize: 11, fontWeight: 700,
+                      color: hasAnswered && (isCorrect || selected) ? 'white' : optColor,
+                    }}>
+                      {['A', 'B', 'C', 'D'][i]}
+                    </span>
+                    {opt}
+                  </button>
+                )
+              })}
+
+              {hasAnswered && (
+                <div style={{ background: '#EAF3DE', border: '1px solid #97C459', borderRadius: 12, padding: '12px 14px', marginBottom: 20 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#3B6D11', marginBottom: 4 }}>
+                    {quizAnswers[quizQIndex] === currentQuizQ.correct ? 'Correct!' : 'Not quite —'}
+                  </div>
+                  <div style={{ fontSize: 13, color: '#3B6D11', lineHeight: 1.6 }}>{currentQuizQ.explanation}</div>
+                </div>
+              )}
+
+              {hasAnswered && (
+                <button
+                  onClick={() => isLastQ ? setQuizPhase('result') : setQuizQIndex(i => i + 1)}
+                  className="btn-primary"
+                  style={{ width: '100%', marginBottom: 20 }}
+                >
+                  {isLastQ ? 'See result' : 'Next question →'}
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <div style={{ textAlign: 'center', padding: '24px 0 20px' }}>
+                <div style={{ fontSize: 44, marginBottom: 12 }}>{passed ? '👌' : '🙂'}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: text1, marginBottom: 8 }}>
+                  {passed ? 'That went well.' : 'A couple of these need another look.'}
+                </div>
+                <div style={{ fontSize: 14, color: text2, lineHeight: 1.6, marginBottom: 20 }}>
+                  {passed ? 'Ready to keep going?' : 'Want to go through the video again?'}
+                </div>
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  background: passed ? '#EAF3DE' : PL,
+                  border: `1.5px solid ${passed ? '#97C459' : P}`,
+                  borderRadius: 50, padding: '8px 20px', marginBottom: 24,
+                }}>
+                  <span style={{ fontSize: 22, fontWeight: 800, color: passed ? '#3B6D11' : PD }}>{quizScore}</span>
+                  <span style={{ fontSize: 13, color: passed ? '#3B6D11' : PD }}>/ {QUIZ_QUESTIONS.length} correct</span>
+                </div>
+
+                <div style={{ textAlign: 'left', marginBottom: 20 }}>
+                  {QUIZ_QUESTIONS.map((q, i) => {
+                    const correct = quizAnswers[i] === q.correct
+                    return (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 14px', marginBottom: 6, borderRadius: 10,
+                        background: correct ? '#EAF3DE' : '#FCEBEB',
+                        border: `1px solid ${correct ? '#97C459' : '#F09595'}`,
+                      }}>
+                        <span style={{ fontSize: 12, color: correct ? '#3B6D11' : '#791F1F', flex: 1, lineHeight: 1.4 }}>
+                          Q{i + 1}: {q.text.slice(0, 55)}…
+                        </span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: correct ? '#3B6D11' : '#791F1F' }}>
+                          {correct ? '✓' : '✗'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 28 }}>
+                {passed ? (
+                  <>
+                    <button onClick={() => navigate('home')} className="btn-primary" style={{ width: '100%' }}>Continue to next video</button>
+                    <button onClick={handleWatchAgain} className="btn-outline" style={{ width: '100%' }}>Watch this again</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={handleWatchAgain} className="btn-primary" style={{ width: '100%' }}>Watch this again</button>
+                    <button onClick={() => navigate('home')} className="btn-outline" style={{ width: '100%' }}>Continue anyway</button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ─── PLAYER PHASE ─────────────────────────────────────────────────────────
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: bg, position: 'relative' }}>
+
+      {/* VIDEO AREA */}
+      <div
+        onClick={() => setShowControls(c => !c)}
+        style={{ background: '#0d0d1a', flexShrink: 0, position: 'relative', width: '100%', aspectRatio: '16/9', cursor: 'pointer', overflow: 'hidden' }}
+      >
+        {/* Gradients */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%)', pointerEvents: 'none', opacity: showControls ? 1 : 0, transition: 'opacity 0.22s' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '45%', background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)', pointerEvents: 'none' }} />
+
+        {/* Top bar: back + language + settings */}
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, padding: '10px 12px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          opacity: showControls ? 1 : 0, transition: 'opacity 0.22s',
+          pointerEvents: showControls ? 'auto' : 'none',
+        }}>
+          <button
+            onClick={e => { e.stopPropagation(); navigate('home') }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'white', display: 'flex', padding: 4 }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg>
+          </button>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button
+              onClick={e => { e.stopPropagation(); setLanguage(l => l === 'EN' ? 'HI' : 'EN') }}
+              style={{
+                fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 5,
+                border: '1.5px solid rgba(255,255,255,0.5)',
+                background: language === 'HI' ? 'rgba(255,255,255,0.2)' : 'none',
+                color: 'rgba(255,255,255,0.9)', cursor: 'pointer', minWidth: 28, textAlign: 'center',
+              }}
+            >
+              {language}
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); setShowSettings(true) }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.8)', display: 'flex' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Centre controls: rewind / play-pause / forward */}
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+          display: 'flex', alignItems: 'center', gap: 36,
+          opacity: showControls ? 1 : 0, transition: 'opacity 0.22s',
+          pointerEvents: showControls ? 'auto' : 'none',
+        }}>
+          <button
+            onClick={e => { e.stopPropagation(); seekBy(-seekInterval) }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
+            </svg>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', fontWeight: 600 }}>{seekInterval}</span>
+          </button>
+
+          <button
+            onClick={e => { e.stopPropagation(); setIsPlaying(p => !p) }}
+            style={{
+              width: 62, height: 62, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.18)', border: '2px solid rgba(255,255,255,0.35)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            }}
+          >
+            {isPlaying
+              ? <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              : <svg width="22" height="22" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 3 }}><polygon points="5,3 19,12 5,21"/></svg>}
+          </button>
+
+          <button
+            onClick={e => { e.stopPropagation(); seekBy(seekInterval) }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+            </svg>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', fontWeight: 600 }}>{seekInterval}</span>
+          </button>
+        </div>
+
+        {/* Bottom: timestamp + progress bar + fullscreen */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 12px 10px' }}>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            marginBottom: 6, opacity: showControls ? 1 : 0, transition: 'opacity 0.22s',
+            pointerEvents: showControls ? 'auto' : 'none',
+          }}>
+            <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>{currentTime}</span>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>12:00</span>
+              <button
+                onClick={e => e.stopPropagation()}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.65)', display: 'flex' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <polyline points="15,3 21,3 21,9"/><polyline points="9,21 3,21 3,15"/>
+                  <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div style={{ position: 'relative', height: 14, display: 'flex', alignItems: 'center' }}>
+            <div style={{ position: 'absolute', left: 0, right: 0, height: showControls ? 3 : 2, background: 'rgba(255,255,255,0.25)', borderRadius: 2, transition: 'height 0.15s' }}>
+              <div style={{ height: '100%', width: `${displayProgress * 100}%`, background: P, borderRadius: 2 }} />
+            </div>
+            {showControls && (
+              <div style={{ position: 'absolute', left: `calc(${displayProgress * 100}% - 6px)`, width: 12, height: 12, borderRadius: '50%', background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.5)', pointerEvents: 'none' }} />
+            )}
+          </div>
+        </div>
+
+        {/* Doubt flag — bottom-left, always visible */}
+        <button
+          onClick={e => { e.stopPropagation(); setIsPlaying(false); setShowDoubtPopup(true) }}
+          style={{
+            position: 'absolute', bottom: 44, left: 12,
+            background: 'rgba(0,0,0,0.45)', border: '1.5px solid rgba(255,255,255,0.3)',
+            borderRadius: '50%', width: 28, height: 28,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: 700, zIndex: 5,
+          }}
+        >
+          ?
+        </button>
+
+        {/* Completion overlay */}
+        {showCompletionOverlay && (
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.88)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: 10, zIndex: 20,
+            }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'white', textAlign: 'center' }}>Done with this one. Nice.</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>Quick check coming up in {countdown}…</div>
+            <button
+              onClick={() => { setShowCompletionOverlay(false); setPhase('quiz') }}
+              style={{ marginTop: 6, padding: '9px 22px', borderRadius: 50, background: P, border: 'none', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+            >
+              Continue now
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Doubt toast */}
+      {showDoubtToast && (
+        <div style={{
+          position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+          background: '#1a1a2e', color: 'white', padding: '10px 18px', borderRadius: 50,
+          fontSize: 12, fontWeight: 600, zIndex: 200, whiteSpace: 'nowrap',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+        }}>
+          Noted — we'll take a look
+        </div>
+      )}
+
+      {/* SCROLLABLE CONTENT */}
+      <div className="scroll" style={{ flex: 1, overflowY: 'auto', background: bg }}>
+
+        {/* Title + meta */}
+        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${borderClr}` }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: text1, lineHeight: 1.35, marginBottom: 3 }}>{title}</div>
+          <div style={{ fontSize: 11, color: text3 }}>Uploaded on: {uploadDate}</div>
+        </div>
+
+        {/* Action row */}
+        <div style={{ padding: '12px 0', borderBottom: `1px solid ${borderClr}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+            {[
+              {
+                id: 'like', label: 'Like', active: liked, color: P,
+                icon: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? P : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>,
+                onClick: handleLike,
+              },
+              {
+                id: 'dislike', label: 'Dislike', active: disliked, color: '#791F1F',
+                icon: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? '#791F1F' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z"/><path d="M17 2h2.67A2.31 2.31 0 0122 4v7a2.31 2.31 0 01-2.33 2H17"/></svg>,
+                onClick: handleDislike,
+              },
+              {
+                id: 'save', label: 'Save', active: isSaved, color: P,
+                icon: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? P : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>,
+                onClick: handleSaveVideo,
+              },
+              {
+                id: 'share', label: 'Share', active: false, color: text2,
+                icon: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
+                onClick: () => console.log('share', title),
+              },
+            ].map(a => (
+              <button
+                key={a.id} onClick={a.onClick}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 10px' }}
+              >
+                {a.icon(a.active)}
+                <span style={{ fontSize: 10, color: a.active ? a.color : text3 }}>{a.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', borderBottom: `1px solid ${borderClr}` }}>
+          {[
+            { id: 'topics', label: 'Topics Covered' },
+            { id: 'resources', label: 'Resources' },
+            { id: 'selfnotes', label: 'Self-Notes' },
+          ].map(tab => (
+            <button
+              key={tab.id} onClick={() => setActiveTab(tab.id)}
+              style={{
+                flex: 1, padding: '11px 4px', fontSize: 12,
+                fontWeight: activeTab === tab.id ? 700 : 500,
+                color: activeTab === tab.id ? P : text3,
+                background: 'none', border: 'none',
+                borderBottom: `2.5px solid ${activeTab === tab.id ? P : 'transparent'}`,
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div style={{ padding: '12px 16px' }}>
+
+          {activeTab === 'topics' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {TOPICS_COVERED.map((topic, i) => (
+                <button
+                  key={i} onClick={() => seekToTimestamp(topic.ts)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px', borderRadius: 10, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+                >
+                  <span style={{ fontSize: 11, fontWeight: 700, color: P, minWidth: 30, flexShrink: 0 }}>{topic.ts}</span>
+                  <div style={{ width: 1, height: 16, background: borderClr, flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, color: text1, flex: 1 }}>{topic.name}</span>
+                  <svg style={{ flexShrink: 0 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={text3} strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'resources' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                {
+                  type: 'slides', label: 'Slides', subtitle: '24 frames · auto-captured',
+                  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
+                },
+                {
+                  type: 'notes', label: 'Notes', subtitle: 'PDF · by content team',
+                  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>,
+                },
+              ].map(res => {
+                const rSaved = res.type === 'slides' ? isSlidesSaved : isNotesSaved
+                return (
+                  <div
+                    key={res.type} onClick={() => setShowResourceModal(res.type)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, border: `1px solid ${borderClr}`, background: cardBg, cursor: 'pointer' }}
+                  >
+                    <div style={{ color: P }}>{res.icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: text1 }}>{res.label}</div>
+                      <div style={{ fontSize: 11, color: text3, marginTop: 2 }}>{res.subtitle}</div>
+                    </div>
+                    <button
+                      onClick={e => { e.stopPropagation(); handleSaveResource(res.type) }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill={rSaved ? P : 'none'} stroke={rSaved ? P : text3} strokeWidth="1.8" strokeLinecap="round">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
+                      </svg>
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {activeTab === 'selfnotes' && (
+            <div>
+              <div style={{ position: 'relative', marginBottom: 4 }}>
+                <textarea
+                  value={selfNotes} onChange={e => handleSelfNotesChange(e.target.value)}
+                  placeholder="Type your notes here…"
+                  style={{ width: '100%', minHeight: 120, padding: '12px 14px', border: `1px solid ${borderClr}`, borderRadius: 12, fontSize: 13, color: text1, background: cardBg, resize: 'none', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+                />
+                <div style={{ position: 'absolute', bottom: 10, right: 12, fontSize: 10, color: GREEN, fontWeight: 600, opacity: selfNotes.length > 0 && notesSaved ? 1 : 0, transition: 'opacity 0.3s' }}>
+                  Saved
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0 12px' }}>
+                <div style={{ flex: 1, height: 1, background: borderClr }} />
+                <span style={{ fontSize: 11, color: text3, fontWeight: 600 }}>OR</span>
+                <div style={{ flex: 1, height: 1, background: borderClr }} />
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button style={{ flex: 1, padding: '14px 8px', borderRadius: 12, border: `1.5px dashed ${borderClr}`, background: 'none', color: text2, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polyline points="16,16 12,12 8,16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
+                  <span>Capture & upload</span>
+                </button>
+                <button style={{ flex: 1, padding: '14px 8px', borderRadius: 12, border: `1.5px dashed ${borderClr}`, background: 'none', color: text2, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                  <span>Record voice</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
+        <div style={{ height: 8 }} />
+      </div>
+
+      {/* REPORT BAR — sticky */}
+      <button
+        onClick={() => setShowReportModal(true)}
+        style={{ flexShrink: 0, width: '100%', padding: '13px', background: GREENBG, borderTop: `1px solid ${GREENBORDER}`, borderLeft: 'none', borderRight: 'none', borderBottom: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: GREEN, textAlign: 'center' }}
+      >
+        Having an issue? Tap to report
+      </button>
+
+      {/* DOUBT POPUP */}
+      {showDoubtPopup && (
+        <div onClick={() => setShowDoubtPopup(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '0 20px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: '22px 18px', width: '100%', maxWidth: 340 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: T1, marginBottom: 8, textAlign: 'center', lineHeight: 1.4 }}>
+              Did you not understand this part of the video?
+            </div>
+            <div style={{ fontSize: 13, color: T2, marginBottom: 20, textAlign: 'center', lineHeight: 1.5 }}>
+              We'll note where you flagged this and review it.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setShowDoubtPopup(false)} style={{ flex: 1, padding: '11px', borderRadius: 10, border: `1px solid ${BD}`, background: 'white', fontSize: 13, fontWeight: 600, color: T2, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={() => { setShowDoubtPopup(false); setShowDoubtToast(true) }} className="btn-primary" style={{ flex: 1.5, fontSize: 13 }}>
+                Yes, flag this
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DISLIKE FEEDBACK */}
+      {showDislikeFeedback && (
+        <div onClick={() => setShowDislikeFeedback(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '0 20px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: '22px 18px', width: '100%', maxWidth: 340 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: T1, marginBottom: 12 }}>What didn't work for you?</div>
+            <textarea
+              value={dislikeFeedbackText} onChange={e => setDislikeFeedbackText(e.target.value)}
+              placeholder="Tell us what felt off… (optional)"
+              style={{ width: '100%', minHeight: 80, padding: '10px 12px', border: `1px solid ${BD}`, borderRadius: 10, fontSize: 13, color: T1, resize: 'none', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: 12 }}
+            />
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setShowDislikeFeedback(false)} style={{ flex: 1, padding: '11px', borderRadius: 10, border: `1px solid ${BD}`, background: 'white', fontSize: 13, fontWeight: 600, color: T2, cursor: 'pointer' }}>
+                Skip
+              </button>
+              <button onClick={() => { setShowDislikeFeedback(false); setDislikeFeedbackText('') }} className="btn-primary" style={{ flex: 1.5, fontSize: 13 }}>
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RESOURCE VIEWER MODAL */}
+      {showResourceModal && (
+        <div onClick={() => setShowResourceModal(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '0 20px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: '22px 18px', width: '100%', maxWidth: 340, textAlign: 'center' }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', color: P }}>
+              {showResourceModal === 'slides'
+                ? <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                : <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>}
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: T1, marginBottom: 4 }}>
+              {showResourceModal === 'slides' ? 'Slides Viewer' : 'Notes PDF'}
+            </div>
+            <div style={{ fontSize: 13, color: T2, marginBottom: 16, lineHeight: 1.5 }}>
+              {showResourceModal === 'slides' ? '24 slides · auto-captured from lecture' : 'PDF by content team · 8 pages'}
+            </div>
+            <div style={{ background: BG2, borderRadius: 10, padding: '28px 16px', color: T3, fontSize: 13, marginBottom: 16 }}>
+              [{showResourceModal === 'slides' ? 'Slides' : 'Notes PDF'} viewer — placeholder]
+            </div>
+            <button onClick={() => setShowResourceModal(null)} className="btn-primary" style={{ width: '100%' }}>Done</button>
+          </div>
+        </div>
+      )}
+
+      {/* REPORT MODAL */}
+      {showReportModal && (
+        <div onClick={() => setShowReportModal(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.55)', display: 'flex', alignItems: 'flex-end', zIndex: 200 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px 20px 0 0', padding: '8px 20px 32px', width: '100%' }}>
+            <div className="sheet-handle" />
+            <div style={{ fontSize: 16, fontWeight: 700, color: T1, margin: '14px 0 6px' }}>Report an issue</div>
+            <div style={{ fontSize: 13, color: T2, marginBottom: 14, lineHeight: 1.5 }}>What's the problem with this video?</div>
+            {['Video not loading', 'Audio issue', 'Wrong content', 'Subtitles incorrect', 'Other'].map(opt => (
+              <button
+                key={opt}
+                onClick={() => { console.log('report:', opt); setShowReportModal(false) }}
+                style={{ width: '100%', padding: '12px 14px', marginBottom: 8, borderRadius: 10, border: `1px solid ${BD}`, background: BG2, color: T1, fontSize: 13, textAlign: 'left', cursor: 'pointer' }}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* SETTINGS SHEET */}
+      {showSettings && (
+        <div className="overlay" onClick={() => setShowSettings(false)}>
+          <div className="sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '75vh' }}>
+            <div className="sheet-handle" />
+            <div style={{ padding: '14px 20px 32px', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: T1 }}>Settings</span>
+                <button onClick={() => setShowSettings(false)} style={{ background: 'none', border: 'none', fontSize: 22, color: T3, cursor: 'pointer', lineHeight: 1 }}>×</button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, borderBottom: `1px solid ${BD}`, marginBottom: 16 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 2 }}>Subtitles</div>
+                  <div style={{ fontSize: 11, color: T3 }}>Language: {language}</div>
+                </div>
+                <Toggle value={subtitlesOn} onChange={setSubtitlesOn} />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, borderBottom: `1px solid ${BD}`, marginBottom: 16 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: T1 }}>Dark Mode</span>
+                <Toggle value={darkMode} onChange={setDarkMode} />
+              </div>
+
+              <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${BD}` }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 10 }}>Playback Speed</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {['0.75x', '1x', '1.25x', '1.5x', '2x'].map(s => (
+                    <button
+                      key={s} onClick={() => setPlaybackSpeed(s)}
+                      style={{ flex: 1, padding: '8px 2px', borderRadius: 8, border: `1.5px solid ${playbackSpeed === s ? P : BD}`, background: playbackSpeed === s ? PL : 'white', color: playbackSpeed === s ? PD : T2, fontSize: 11, fontWeight: playbackSpeed === s ? 700 : 400, cursor: 'pointer' }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${BD}` }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 10 }}>Rewind / Forward</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[5, 10, 15].map(s => (
+                    <button
+                      key={s} onClick={() => setSeekInterval(s)}
+                      style={{ flex: 1, padding: '9px 4px', borderRadius: 8, border: `1.5px solid ${seekInterval === s ? P : BD}`, background: seekInterval === s ? PL : 'white', color: seekInterval === s ? PD : T2, fontSize: 12, fontWeight: seekInterval === s ? 700 : 400, cursor: 'pointer' }}
+                    >
+                      {s}s
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 10 }}>Video Quality</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {['Auto', '480p', '720p', '1080p'].map(q => (
+                    <button
+                      key={q} onClick={() => setVideoQuality(q)}
+                      style={{ flex: 1, padding: '8px 2px', borderRadius: 8, border: `1.5px solid ${videoQuality === q ? P : BD}`, background: videoQuality === q ? PL : 'white', color: videoQuality === q ? PD : T2, fontSize: 11, fontWeight: videoQuality === q ? 700 : 400, cursor: 'pointer' }}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={() => setShowSettings(false)} className="btn-primary" style={{ width: '100%' }}>Done</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
