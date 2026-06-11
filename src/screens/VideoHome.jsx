@@ -8,7 +8,7 @@ export default function VideoHome({
   navigate,
   setCurrentSubject,
   savedVideos = [],
-  isReturningUser, setIsReturningUser,
+  scenario, setScenario,
   isFreeTier, setIsFreeTier,
   videoProgress = {},
 }) {
@@ -43,20 +43,24 @@ export default function VideoHome({
 
       {/* Prototype toggles */}
       <div style={{ padding: '8px 16px', background: '#F8F7FF', borderBottom: `1px solid ${BD}`, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', flexShrink: 0 }}>
-        {/* New / Returning toggle */}
+        {/* Scenario toggle: New | Returning A | Returning B */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 10, color: T3, fontWeight: 600 }}>User:</span>
           <div style={{ display: 'flex', background: BD, borderRadius: 50, padding: 2, gap: 1 }}>
-            {[{ val: false, label: 'New' }, { val: true, label: 'Returning' }].map(o => (
+            {[
+              { val: 'new',         label: 'New'    },
+              { val: 'returning-a', label: 'Ret A'  },
+              { val: 'returning-b', label: 'Ret B'  },
+            ].map(o => (
               <button
-                key={String(o.val)}
-                onClick={() => setIsReturningUser(o.val)}
+                key={o.val}
+                onClick={() => setScenario(o.val)}
                 style={{
                   padding: '4px 10px', borderRadius: 50, border: 'none', cursor: 'pointer',
                   fontSize: 10, fontWeight: 600,
-                  background: isReturningUser === o.val ? 'white' : 'transparent',
-                  color: isReturningUser === o.val ? (o.val ? P : T1) : T3,
-                  boxShadow: isReturningUser === o.val ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                  background: scenario === o.val ? 'white' : 'transparent',
+                  color: scenario === o.val ? (o.val === 'new' ? T1 : P) : T3,
+                  boxShadow: scenario === o.val ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
                   transition: 'all 0.15s',
                 }}
               >

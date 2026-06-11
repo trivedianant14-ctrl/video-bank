@@ -3,6 +3,7 @@ import VideoHome from './screens/VideoHome'
 import PreVideoScreen from './screens/PreVideoScreen'
 import VideoPlayer from './screens/VideoPlayer'
 import Saved from './screens/Saved'
+import { SCENARIO_NEW, SCENARIO_RETURNING_A, SCENARIO_RETURNING_B } from './data/subjects'
 
 const SCREEN_DEPTH = {
   home: 0,
@@ -11,38 +12,35 @@ const SCREEN_DEPTH = {
   videoplayer: 2,
 }
 
-// Simulated watch history for returning user
-const MOCK_PROGRESS_RETURNING = {
-  'cv-part1':    { secondsWatched: 720, completed: true,  lastWatched: Date.now() - 86400000 * 2 },
-  'cv-part2':    { secondsWatched: 340, completed: false, lastWatched: Date.now() - 86400000 },
-  'renal-part1': { secondsWatched: 0,   completed: false, lastWatched: null },
-  'resp-part1':  { secondsWatched: 705, completed: true,  lastWatched: Date.now() - 86400000 * 5 },
-  'neuro-part1': { secondsWatched: 0,   completed: false, lastWatched: null },
-  'pharm-part1': { secondsWatched: 0,   completed: false, lastWatched: null },
+const SCENARIO_MAP = {
+  'new':          SCENARIO_NEW,
+  'returning-a':  SCENARIO_RETURNING_A,
+  'returning-b':  SCENARIO_RETURNING_B,
 }
 
 export default function App() {
-  const [screen, setScreen] = useState('home')
+  const [screen, setScreen]               = useState('home')
   const [currentSubject, setCurrentSubject] = useState(null)
-  const [currentVideo, setCurrentVideo] = useState(null)
-  const [savedVideos, setSavedVideos] = useState([])
+  const [currentVideo, setCurrentVideo]   = useState(null)
+  const [savedVideos, setSavedVideos]     = useState([])
   const [savedResources, setSavedResources] = useState([])
-  const [isReturningUser, setIsReturningUser] = useState(false)
-  const [isFreeTier, setIsFreeTier] = useState(false)
+  const [scenario, setScenario]           = useState('new')
+  const [isFreeTier, setIsFreeTier]       = useState(false)
   const animDirRef = useRef('forward')
 
-  const videoProgress = isReturningUser ? MOCK_PROGRESS_RETURNING : {}
+  const isReturningUser = scenario !== 'new'
+  const videoProgress   = SCENARIO_MAP[scenario] ?? {}
 
   const goTo = (next) => {
     const currDepth = SCREEN_DEPTH[screen] ?? 0
-    const nextDepth = SCREEN_DEPTH[next] ?? 0
+    const nextDepth = SCREEN_DEPTH[next]   ?? 0
     animDirRef.current = nextDepth >= currDepth ? 'forward' : 'backward'
     setScreen(next)
   }
 
-  const saveVideo    = (v) => setSavedVideos(prev => prev.some(x => x.id === v.id) ? prev : [...prev, v])
-  const unsaveVideo  = (id) => setSavedVideos(prev => prev.filter(v => v.id !== id))
-  const saveResource = (r) => setSavedResources(prev => prev.some(x => x.id === r.id) ? prev : [...prev, r])
+  const saveVideo      = (v)  => setSavedVideos(prev => prev.some(x => x.id === v.id) ? prev : [...prev, v])
+  const unsaveVideo    = (id) => setSavedVideos(prev => prev.filter(v => v.id !== id))
+  const saveResource   = (r)  => setSavedResources(prev => prev.some(x => x.id === r.id) ? prev : [...prev, r])
   const unsaveResource = (id) => setSavedResources(prev => prev.filter(r => r.id !== id))
 
   return (
@@ -54,8 +52,8 @@ export default function App() {
             navigate={goTo}
             setCurrentSubject={setCurrentSubject}
             savedVideos={savedVideos}
-            isReturningUser={isReturningUser}
-            setIsReturningUser={setIsReturningUser}
+            scenario={scenario}
+            setScenario={setScenario}
             isFreeTier={isFreeTier}
             setIsFreeTier={setIsFreeTier}
             videoProgress={videoProgress}

@@ -1,398 +1,496 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
+import { VIDEO_DURATION_SECS, GROUP_SIZE } from '../data/subjects'
 
-const P = '#534AB7', PL = '#EEEDFE', PD = '#3C3489'
+// ─── palette ──────────────────────────────────────────────────────────────────
+const P = '#534AB7', PL = '#EEEDFE'
 const T1 = '#1a1a2e', T2 = '#5a5a78', T3 = '#9898b0', BD = '#e8e8f2', BG2 = '#f5f5fb'
-const GREEN = '#3B6D11', GREENBG = '#EAF3DE', GREENBORDER = '#97C459'
-const AMBER = '#633806', AMBERBG = '#FAEEDA', AMBERBORDER = '#FAC775'
+const GREEN = '#3B6D11', GREENBG = '#EAF3DE'
 
-const TOTAL_DURATION_SECS = 720
-
-const TUTOR = {
-  name: 'Dr. Priya Mehta',
-  role: 'Senior Nursing Faculty · NPrep',
-  bio: 'Over 14 years teaching clinical nursing in India. Known for breaking down complex physiology into exam-ready concepts — especially for tier 2/3 students preparing for NCLEX and state exams.',
-  initials: 'PM',
+// ─── helpers ──────────────────────────────────────────────────────────────────
+function vidStatus(id, vp) {
+  const p = vp[id]
+  if (!p || !p.secondsWatched) return 'not-started'
+  if (p.completed) return 'completed'
+  return 'paused'
 }
 
-const FILTERS = [
-  { id: 'all',        label: 'All' },
-  { id: 'notstarted', label: 'Not started' },
-  { id: 'paused',     label: 'In progress' },
-  { id: 'completed',  label: 'Completed' },
-]
-
-const getPercent = (prog) => {
-  if (!prog) return 0
-  if (prog.completed) return 100
-  return Math.round((prog.secondsWatched / TOTAL_DURATION_SECS) * 100)
+function StatusDot({ status }) {
+  if (status === 'completed') return (
+    <div style={{ width: 20, height: 20, borderRadius: '50%', background: GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+        <polyline points="1,4.5 4,7.5 10,1.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </div>
+  )
+  if (status === 'paused') return (
+    <div style={{ width: 20, height: 20, borderRadius: '50%', background: PL, border: `1.5px solid ${P}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <svg width="7" height="8" viewBox="0 0 7 8" fill={P}><polygon points="0.5,0.5 6.5,4 0.5,7.5"/></svg>
+    </div>
+  )
+  return (
+    <div style={{ width: 20, height: 20, borderRadius: '50%', border: `1.5px solid ${BD}`, background: 'white', flexShrink: 0 }}/>
+  )
 }
 
+// ─── main ──────────────────────────────────────────────────────────────────────
 export default function PreVideoScreen({
   navigate,
   currentSubject,
   setCurrentVideo,
-  savedVideos = [],
-  isReturningUser = false,
-  isFreeTier = false,
+  isFreeTier,
   videoProgress = {},
 }) {
-  const [activeFilter, setActiveFilter] = useState('all')
-  const [showLockedVideos, setShowLockedVideos] = useState(false)
-  const [stickyLabel, setStickyLabel] = useState('')
-  const scrollRef = useRef(null)
-  const listHeaderRef = useRef(null)
-
   if (!currentSubject) return null
-  const { name: subjectName, color: subjectColor, videos } = currentSubject
 
-  // Free-tier: lock the last third of videos
-  const lockThreshold = Math.ceil(videos.length * 0.66)
-  const videosWithMeta = videos.map((v, i) => ({
-    ...v,
-    locked: isFreeTier && !showLockedVideos && i >= lockThreshold,
-    lockedHidden: isFreeTier && !showLockedVideos && i >= lockThreshold,
-    prog: videoProgress[v.id] || { secondsWatched: 0, completed: false, lastWatched: null },
-  }))
-  const visibleVideos = videosWithMeta.filter(v => !v.lockedHidden || showLockedVideos)
+  const [activeFilter,   setActiveFilter]   = useState('all')
+  const [showIndexSheet, setShowIndexSheet] = useState(false)
+  const [showOrderModal, setShowOrderModal] = useState(false)
+  const [showTutorSheet, setShowTutorSheet] = useState(false)
+  const [toast,          setToast]          = useState(null)
 
-  // Filtered list (progress filters)
-  const filteredVideos = visibleVideos.filter(v => {
-    if (activeFilter === 'notstarted') return !v.prog.completed && v.prog.secondsWatched === 0
-    if (activeFilter === 'completed')  return v.prog.completed
-    if (activeFilter === 'paused')     return !v.prog.completed && v.prog.secondsWatched > 0
-    return true
-  })
+  const scrollRef   = useRef(null)
+  const chapterRefs = useRef({})
 
-  // Progress summary
-  const completedCount = videosWithMeta.filter(v => v.prog.completed).length
-  const inProgressCount = videosWithMeta.filter(v => !v.prog.completed && v.prog.secondsWatched > 0).length
-  const totalCount = videos.length
+  // ── chapters ────────────────────────────────────────────────────────────────
+  const chapters  = currentSubject.chapters
+    ? currentSubject.chapters
+    : [{ id: 'all', name: currentSubject.name, videos: currentSubject.videos }]
 
-  // Continue / Resume card
-  const resumeCard = (() => {
-    const inProgress = videosWithMeta
-      .filter(v => !v.prog.completed && v.prog.secondsWatched > 0)
-      .sort((a, b) => (b.prog.lastWatched || 0) - (a.prog.lastWatched || 0))
-    if (inProgress.length > 0) return { type: 'resume', video: inProgress[0] }
-    const nextUp = videosWithMeta.find(v => !v.prog.completed)
-    if (!nextUp) return { type: 'allDone' }
-    return { type: completedCount > 0 ? 'continue' : 'start', video: nextUp }
-  })()
+  const allVideos      = chapters.flatMap(ch => ch.videos)
+  const totalCount     = allVideos.length
+  const completedCount = allVideos.filter(v => videoProgress[v.id]?.completed).length
+  const progressPct    = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
 
-  // Suggested order: pair videos
+  // ── continue/resume card ────────────────────────────────────────────────────
+  const inProgress = allVideos
+    .filter(v => !videoProgress[v.id]?.completed && (videoProgress[v.id]?.secondsWatched || 0) > 0)
+    .sort((a, b) => (videoProgress[b.id]?.lastWatched || 0) - (videoProgress[a.id]?.lastWatched || 0))
+
+  let cta
+  if (inProgress.length > 0) {
+    const v   = inProgress[0]
+    const pct = Math.round(((videoProgress[v.id]?.secondsWatched || 0) / VIDEO_DURATION_SECS) * 100)
+    cta = { type: 'resume', video: v, pct }
+  } else if (completedCount > 0) {
+    const next = allVideos.find(v => !videoProgress[v.id]?.completed)
+    cta = next ? { type: 'continue', video: next } : { type: 'all-done' }
+  } else {
+    cta = { type: 'start', video: allVideos[0] }
+  }
+
+  // ── filters ─────────────────────────────────────────────────────────────────
+  const FILTERS = [
+    ...(isFreeTier ? [{ id: 'free',        label: 'Free'        }] : []),
+    { id: 'all',         label: 'All'         },
+    { id: 'not-started', label: 'Not started' },
+    { id: 'completed',   label: 'Completed'   },
+    { id: 'paused',      label: 'Paused'      },
+  ]
+
+  const filteredChapters = chapters.map(ch => ({
+    ...ch,
+    videos: ch.videos.filter(v => {
+      const s = vidStatus(v.id, videoProgress)
+      if (activeFilter === 'free')        return v.free
+      if (activeFilter === 'not-started') return s === 'not-started'
+      if (activeFilter === 'completed')   return s === 'completed'
+      if (activeFilter === 'paused')      return s === 'paused'
+      return true
+    }),
+  })).filter(ch => ch.videos.length > 0)
+
+  // ── suggested groups ────────────────────────────────────────────────────────
   const suggestedGroups = []
-  for (let i = 0; i < videos.length; i += 2) suggestedGroups.push(videos.slice(i, i + 2))
+  for (let i = 0; i < allVideos.length; i += GROUP_SIZE) {
+    suggestedGroups.push(allVideos.slice(i, i + GROUP_SIZE))
+  }
 
-  // Sticky label from scroll
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const onScroll = () => {
-      if (listHeaderRef.current) {
-        const rect = listHeaderRef.current.getBoundingClientRect()
-        setStickyLabel(rect.top <= 56 ? subjectName : '')
-      }
-    }
-    el.addEventListener('scroll', onScroll, { passive: true })
-    return () => el.removeEventListener('scroll', onScroll)
-  }, [subjectName])
+  // ── handlers ────────────────────────────────────────────────────────────────
+  const showToast = (msg) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 2500)
+  }
 
-  const handleVideoTap = (v) => {
-    if (v.locked) return
-    setCurrentVideo(v)
+  const handleVideoTap = (video) => {
+    if (isFreeTier && !video.free) { showToast('This video requires a paid plan'); return }
+    setCurrentVideo(video)
     navigate('videoplayer')
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'white', position: 'relative' }}>
+  const jumpToChapter = (chapterId) => {
+    const el  = chapterRefs.current[chapterId]
+    const box = scrollRef.current
+    if (el && box) box.scrollTop += el.getBoundingClientRect().top - box.getBoundingClientRect().top
+    setShowIndexSheet(false)
+    setActiveFilter('all')
+  }
 
-      {/* ── FIXED HEADER ── */}
-      <div style={{
-        flexShrink: 0, borderBottom: `1px solid ${BD}`,
-        background: 'white', zIndex: 10,
-      }}>
-        <div style={{ padding: '12px 16px 10px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            onClick={() => navigate('home')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: T1, display: 'flex', padding: 2 }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg>
-          </button>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 17, fontWeight: 800, color: T1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {stickyLabel || subjectName}
-            </div>
-            <div style={{ fontSize: 11, color: T3, marginTop: 1 }}>NPrep · Video Bank</div>
-          </div>
-          <button
-            onClick={() => navigate('saved')}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill={savedVideos.length > 0 ? P : 'none'} stroke={savedVideos.length > 0 ? P : T3} strokeWidth="1.8" strokeLinecap="round">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
-            </svg>
-            <span style={{ fontSize: 9, color: savedVideos.length > 0 ? P : T3, fontWeight: 600 }}>Saved</span>
-          </button>
+  const ctaLabel = cta.type === 'resume' ? 'Resume' : cta.type === 'continue' ? 'Continue with' : 'Start with'
+
+  // ── render ──────────────────────────────────────────────────────────────────
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'white', position: 'relative', overflow: 'hidden' }}>
+
+      {/* Status bar */}
+      <div style={{ padding: '12px 20px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: T1 }}>9:41</span>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', color: T2 }}>
+          <svg width="16" height="11" viewBox="0 0 30 20" fill="currentColor"><rect x="0" y="8" width="4" height="12" rx="1" opacity="0.4"/><rect x="7" y="5" width="4" height="15" rx="1" opacity="0.6"/><rect x="14" y="2" width="4" height="18" rx="1" opacity="0.8"/><rect x="21" y="0" width="4" height="20" rx="1"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="2" stroke="currentColor"/><rect x="22" y="3.5" width="2.5" height="5" rx="1" fill="currentColor" opacity="0.4"/><rect x="1.5" y="1.5" width="15" height="9" rx="1.5" fill="currentColor"/></svg>
+        </div>
+      </div>
+
+      {/* Top bar: Back · Subject · Index */}
+      <div style={{ padding: '4px 16px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${BD}`, flexShrink: 0 }}>
+        <button
+          onClick={() => navigate('home')}
+          style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px 4px 0' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T2} strokeWidth="2.2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <span style={{ fontSize: 13, color: T2 }}>Back</span>
+        </button>
+
+        <div style={{ fontSize: 15, fontWeight: 800, color: T1, textAlign: 'center', flex: 1, padding: '0 8px' }}>
+          {currentSubject.name}
         </div>
 
-        {/* Free preview banner */}
-        {isFreeTier && (
-          <div style={{ padding: '8px 16px', background: AMBERBG, borderTop: `1px solid ${AMBERBORDER}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={AMBER} strokeWidth="2" strokeLinecap="round">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        {currentSubject.chapters ? (
+          <button
+            onClick={() => setShowIndexSheet(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0 4px 8px' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6"  x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="15" y2="12"/>
+              <line x1="3" y1="18" x2="18" y2="18"/>
             </svg>
-            <span style={{ fontSize: 12, color: AMBER, flex: 1, lineHeight: 1.4 }}>
-              Free preview · <strong>{lockThreshold} of {totalCount}</strong> videos unlocked
-            </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-              <span style={{ fontSize: 11, color: AMBER, fontWeight: 500 }}>Show all</span>
-              <div
-                onClick={() => setShowLockedVideos(v => !v)}
-                style={{
-                  width: 34, height: 18, borderRadius: 9, cursor: 'pointer',
-                  background: showLockedVideos ? '#C05C0D' : AMBERBORDER,
-                  position: 'relative', transition: 'background 0.2s', flexShrink: 0,
-                }}
-              >
-                <div style={{ position: 'absolute', top: 2, left: showLockedVideos ? 18 : 2, width: 14, height: 14, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
-              </div>
-            </div>
-          </div>
+            <span style={{ fontSize: 13, color: P, fontWeight: 600 }}>Index</span>
+          </button>
+        ) : (
+          <div style={{ width: 60 }}/>
         )}
       </div>
 
-      {/* ── SCROLLABLE BODY ── */}
+      {/* ── Scrollable body ──────────────────────────────────────────────── */}
       <div ref={scrollRef} className="scroll" style={{ flex: 1, overflowY: 'auto' }}>
 
         {/* Progress summary */}
-        <div style={{ padding: '14px 16px 12px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 6 }}>
-              {completedCount === 0
-                ? `${totalCount} video${totalCount > 1 ? 's' : ''} in this subject`
-                : `${completedCount} of ${totalCount} watched`}
+        <div style={{ padding: '16px 16px 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 6 }}>
+            <div>
+              <span style={{ fontSize: 22, fontWeight: 800, color: completedCount > 0 ? P : T1 }}>{completedCount}</span>
+              <span style={{ fontSize: 14, color: T3, fontWeight: 500 }}> of {totalCount} watched</span>
             </div>
-            <div style={{ height: 4, background: BD, borderRadius: 2, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', borderRadius: 2,
-                width: `${(completedCount / totalCount) * 100}%`,
-                background: completedCount === totalCount ? GREEN : P,
-                transition: 'width 0.3s',
-              }} />
-            </div>
+            <span style={{ fontSize: 12, color: completedCount === totalCount && totalCount > 0 ? GREEN : T3, fontWeight: 600 }}>
+              {progressPct}%{completedCount === totalCount && totalCount > 0 ? ' · All done ✓' : ''}
+            </span>
           </div>
-          {inProgressCount > 0 && (
-            <div style={{ fontSize: 11, color: T3, background: BG2, padding: '4px 9px', borderRadius: 50, flexShrink: 0 }}>
-              {inProgressCount} in progress
-            </div>
-          )}
+          <div style={{ height: 5, background: BD, borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', borderRadius: 3, transition: 'width 0.4s',
+              width: `${progressPct}%`,
+              background: completedCount === totalCount && totalCount > 0 ? GREEN : P,
+            }}/>
+          </div>
         </div>
 
-        {/* Continue / Resume card */}
-        <div style={{ padding: '0 16px 14px' }}>
-          {resumeCard.type === 'allDone' ? (
-            <div style={{ padding: '14px 16px', borderRadius: 14, background: GREENBG, border: `1.5px solid ${GREENBORDER}`, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg>
-              </div>
+        {/* Continue/Resume card */}
+        <div style={{ padding: '12px 16px 0' }}>
+          {cta.type === 'all-done' ? (
+            <div style={{ background: GREENBG, borderRadius: 12, border: `1.5px solid ${GREEN}44`, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill={GREEN}/><polyline points="5,10.5 8.5,14 15,6.5" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: GREEN }}>All videos completed!</div>
-                <div style={{ fontSize: 11, color: GREEN, opacity: 0.8, marginTop: 2 }}>You can rewatch any video from the list below.</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: GREEN }}>All done!</div>
+                <div style={{ fontSize: 11, color: GREEN, opacity: 0.8 }}>You've completed all videos in this subject.</div>
               </div>
             </div>
           ) : (
             <button
-              onClick={() => handleVideoTap(resumeCard.video)}
-              style={{
-                width: '100%', padding: '14px 16px', borderRadius: 14,
-                background: PL, border: `1.5px solid ${P}44`,
-                textAlign: 'left', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 12,
-              }}
+              onClick={() => handleVideoTap(cta.video)}
+              style={{ width: '100%', textAlign: 'left', background: PL, borderRadius: 12, border: `1.5px solid ${P}22`, padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}
             >
-              <div style={{ width: 38, height: 38, borderRadius: '50%', background: P, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="white" style={{ marginLeft: resumeCard.type === 'resume' ? 2 : 0 }}><polygon points="5,3 19,12 5,21"/></svg>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: P, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="white"><polygon points="4,3 17,10 4,17"/></svg>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: PD, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
-                  {resumeCard.type === 'resume' ? 'Resume where you left off' : resumeCard.type === 'continue' ? 'Continue with' : 'Start with'}
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: T1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {resumeCard.video.title}
-                </div>
-                {resumeCard.type === 'resume' && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                    <div style={{ flex: 1, height: 3, background: `${P}30`, borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${getPercent(resumeCard.video.prog)}%`, background: P, borderRadius: 2 }} />
+                <div style={{ fontSize: 10, fontWeight: 700, color: P, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{ctaLabel}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cta.video?.title}</div>
+                {cta.type === 'resume' && (
+                  <div style={{ marginTop: 6 }}>
+                    <div style={{ height: 3, background: `${P}33`, borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', borderRadius: 2, background: P, width: `${cta.pct}%` }}/>
                     </div>
-                    <span style={{ fontSize: 10, color: PD, fontWeight: 600, flexShrink: 0 }}>{getPercent(resumeCard.video.prog)}%</span>
+                    <div style={{ fontSize: 10, color: P, fontWeight: 600, marginTop: 3 }}>{cta.pct}% watched</div>
                   </div>
                 )}
               </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M9 18l6-6-6-6"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
             </button>
           )}
         </div>
 
-        {/* Suggested order */}
-        <div style={{ padding: '4px 16px 16px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Suggested order</div>
-          {suggestedGroups.map((group, gi) => {
-            const groupAllDone = group.every(v => videoProgress[v.id]?.completed)
-            const groupStarted = group.some(v => videoProgress[v.id]?.secondsWatched > 0)
-            return (
-              <div key={gi} style={{ marginBottom: 8, borderRadius: 12, border: `1px solid ${BD}`, overflow: 'hidden' }}>
-                {/* Group header */}
-                <div style={{ padding: '9px 14px', background: groupAllDone ? GREENBG : BG2, display: 'flex', alignItems: 'center', gap: 8, borderBottom: `1px solid ${BD}` }}>
-                  <div style={{
-                    width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                    background: groupAllDone ? GREEN : groupStarted ? P : BD,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {groupAllDone
-                      ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg>
-                      : <span style={{ fontSize: 10, fontWeight: 800, color: groupStarted ? 'white' : T3 }}>{gi + 1}</span>}
-                  </div>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: groupAllDone ? GREEN : T2, flex: 1 }}>
-                    {group.length === 1
-                      ? `Video ${gi * 2 + 1}`
-                      : `Videos ${gi * 2 + 1} – ${gi * 2 + group.length}`}
-                  </span>
-                  <span style={{ fontSize: 10, color: groupAllDone ? GREEN : T3, fontWeight: 600 }}>
-                    {groupAllDone ? 'Done ✓' : `${group.reduce((sum, v) => sum + (videoProgress[v.id]?.completed ? 1 : 0), 0)}/${group.length}`}
-                  </span>
-                </div>
-                {/* Group videos */}
-                {group.map((v) => {
-                  const prog = videoProgress[v.id] || {}
-                  const pct = getPercent(prog)
-                  return (
-                    <div
-                      key={v.id}
-                      onClick={() => { setCurrentVideo(v); navigate('videoplayer') }}
-                      style={{ padding: '10px 14px', background: 'white', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderTop: `1px solid ${BD}` }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: prog.completed ? 500 : 500, color: prog.completed ? T2 : T1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {v.title}
-                        </div>
-                        <div style={{ fontSize: 11, color: T3, marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span>{v.duration}</span>
-                          {prog.completed && <span style={{ color: GREEN, fontWeight: 600 }}>· Completed</span>}
-                          {!prog.completed && pct > 0 && <span style={{ color: P, fontWeight: 600 }}>· {pct}% watched</span>}
-                        </div>
-                      </div>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          })}
+        {/* Suggested order CTA */}
+        <div style={{ padding: '10px 16px 0' }}>
+          <button
+            onClick={() => setShowOrderModal(true)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${BD}`, background: BG2, cursor: 'pointer' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T2} strokeWidth="2" strokeLinecap="round">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="7" height="7" rx="1"/>
+              </svg>
+              <span style={{ fontSize: 13, fontWeight: 600, color: T2 }}>View suggested order</span>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
         </div>
 
-        {/* Progress filters — positioned above the full video list, within comfortable thumb reach */}
-        <div ref={listHeaderRef} style={{ padding: '0 16px 10px', display: 'flex', gap: 6, overflowX: 'auto' }}>
-          {FILTERS.map(f => {
-            const count = videosWithMeta.filter(v => {
-              if (f.id === 'all')        return true
-              if (f.id === 'notstarted') return !v.prog.completed && v.prog.secondsWatched === 0
-              if (f.id === 'completed')  return v.prog.completed
-              if (f.id === 'paused')     return !v.prog.completed && v.prog.secondsWatched > 0
-              return true
-            }).length
-            const active = activeFilter === f.id
-            return (
-              <button
-                key={f.id}
-                onClick={() => setActiveFilter(f.id)}
-                style={{
-                  padding: '7px 13px', borderRadius: 50, flexShrink: 0, cursor: 'pointer',
-                  border: `1.5px solid ${active ? P : BD}`,
-                  background: active ? PL : 'white',
-                  color: active ? PD : T3,
-                  fontSize: 12, fontWeight: active ? 700 : 500,
-                  display: 'flex', alignItems: 'center', gap: 5,
-                }}
-              >
-                {f.label}
-                <span style={{ fontSize: 10, fontWeight: 700, color: active ? PD : T3, background: active ? `${P}22` : BD, borderRadius: 50, padding: '1px 5px' }}>{count}</span>
-              </button>
-            )
-          })}
+        {/* Filters */}
+        <div style={{ padding: '14px 0 4px' }}>
+          <div style={{ display: 'flex', gap: 6, paddingLeft: 16, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none' }}>
+            {FILTERS.map(f => {
+              const active = activeFilter === f.id
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setActiveFilter(f.id)}
+                  style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600, background: active ? P : 'white', color: active ? 'white' : T2, border: `1.5px solid ${active ? P : BD}`, transition: 'all 0.15s' }}
+                >
+                  {f.label}
+                </button>
+              )
+            })}
+            <div style={{ width: 8, flexShrink: 0 }}/>
+          </div>
         </div>
 
         {/* Video list */}
-        <div style={{ padding: '0 16px' }}>
-          {filteredVideos.length === 0 ? (
-            <div style={{ padding: '32px 0', textAlign: 'center', color: T3, fontSize: 13 }}>
-              No videos match this filter.
+        {filteredChapters.length === 0 ? (
+          <div style={{ padding: '40px 16px', textAlign: 'center', color: T3 }}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={BD} strokeWidth="1.5" style={{ display: 'block', margin: '0 auto 10px' }}><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>No videos match this filter</div>
+          </div>
+        ) : filteredChapters.map(ch => (
+          <div key={ch.id} ref={el => { chapterRefs.current[ch.id] = el }}>
+            {/* Sticky chapter header */}
+            <div style={{ position: 'sticky', top: 0, zIndex: 2, background: 'white', borderBottom: `1px solid ${BD}`, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 3, height: 16, borderRadius: 2, background: currentSubject.color || P, flexShrink: 0 }}/>
+              <span style={{ fontSize: 12, fontWeight: 700, color: T2, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{ch.name}</span>
+              <span style={{ fontSize: 11, color: T3, marginLeft: 2 }}>
+                {ch.videos.filter(v => videoProgress[v.id]?.completed).length}/{ch.videos.length}
+              </span>
             </div>
-          ) : filteredVideos.map((v, i) => {
-            const pct = getPercent(v.prog)
-            const isLast = i === filteredVideos.length - 1
-            return (
-              <div
-                key={v.id}
-                onClick={() => handleVideoTap(v)}
-                style={{
-                  padding: '13px 0',
-                  borderBottom: isLast ? 'none' : `1px solid ${BD}`,
-                  cursor: v.locked ? 'default' : 'pointer',
-                  display: 'flex', alignItems: 'flex-start', gap: 12,
-                  opacity: v.locked ? 0.55 : 1,
-                }}
-              >
-                {/* Status circle */}
-                <div style={{
-                  width: 30, height: 30, borderRadius: '50%', flexShrink: 0, marginTop: 1,
-                  background: v.prog.completed ? GREEN : v.prog.secondsWatched > 0 ? P : v.locked ? BD : BG2,
-                  border: v.locked || (!v.prog.completed && v.prog.secondsWatched === 0) ? `1.5px solid ${BD}` : 'none',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {v.locked
-                    ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                    : v.prog.completed
-                    ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg>
-                    : v.prog.secondsWatched > 0
-                    ? <svg width="10" height="10" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 1 }}><polygon points="5,3 19,12 5,21"/></svg>
-                    : <span style={{ fontSize: 10, fontWeight: 700, color: T3 }}>{videos.indexOf(v) + 1}</span>}
-                </div>
 
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: T1, lineHeight: 1.35, marginBottom: 2 }}>{v.title}</div>
-                  <div style={{ fontSize: 11, color: T3, marginBottom: v.prog.secondsWatched > 0 && !v.prog.completed ? 6 : 0 }}>
-                    Uploaded {v.uploadDate} · {v.duration}
-                    {v.locked && <span style={{ color: AMBER, fontWeight: 600, marginLeft: 6 }}>· Locked</span>}
+            {/* Video rows */}
+            {ch.videos.map(video => {
+              const status = vidStatus(video.id, videoProgress)
+              const locked = isFreeTier && !video.free
+              const pct    = status === 'paused'
+                ? Math.round(((videoProgress[video.id]?.secondsWatched || 0) / VIDEO_DURATION_SECS) * 100)
+                : 0
+
+              return (
+                <button
+                  key={video.id}
+                  onClick={() => handleVideoTap(video)}
+                  style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', background: locked ? '#fafafa' : 'white', border: 'none', borderBottom: `1px solid ${BD}`, cursor: 'pointer' }}
+                >
+                  <div style={{ paddingTop: 2 }}>
+                    <StatusDot status={locked ? 'not-started' : status}/>
                   </div>
-                  {/* Progress bar (in-progress only) */}
-                  {v.prog.secondsWatched > 0 && !v.prog.completed && (
-                    <div style={{ height: 3, background: `${P}25`, borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, background: P, borderRadius: 2 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: locked ? T3 : status === 'completed' ? T2 : T1, lineHeight: 1.35, marginBottom: 3 }}>
+                      {video.title}
                     </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 11, color: T3 }}>Uploaded {video.uploadDate}</span>
+                      <span style={{ fontSize: 11, color: T3 }}>·</span>
+                      <span style={{ fontSize: 11, color: T3 }}>{video.duration}</span>
+                    </div>
+                    {status === 'paused' && !locked && (
+                      <div style={{ marginTop: 6 }}>
+                        <div style={{ height: 2.5, background: BD, borderRadius: 2, overflow: 'hidden', width: '75%' }}>
+                          <div style={{ height: '100%', background: P, borderRadius: 2, width: `${pct}%` }}/>
+                        </div>
+                        <div style={{ fontSize: 10, color: P, fontWeight: 600, marginTop: 2 }}>{pct}% watched</div>
+                      </div>
+                    )}
+                  </div>
+                  {locked ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, paddingTop: 2, flexShrink: 0 }}>
+                      <svg width="14" height="16" viewBox="0 0 14 16" fill="none">
+                        <rect x="1.5" y="6.5" width="11" height="9" rx="2" stroke={T3} strokeWidth="1.5"/>
+                        <path d="M4 6.5V5a3 3 0 016 0v1.5" stroke={T3} strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                      <span style={{ fontSize: 9, color: T3, fontWeight: 600 }}>Paid</span>
+                    </div>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 4 }}><path d="M9 18l6-6-6-6"/></svg>
                   )}
-                </div>
-
-                {!v.locked && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 4 }}><path d="M9 18l6-6-6-6"/></svg>
-                )}
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Tutor card — low emphasis, bottom of screen */}
-        <div style={{ margin: '16px 16px 32px', padding: '14px 14px', borderRadius: 14, border: `1px solid ${BD}`, background: BG2, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13, fontWeight: 800, color: PD }}>
-            {TUTOR.initials}
+                </button>
+              )
+            })}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: T1 }}>{TUTOR.name}</div>
-            <div style={{ fontSize: 11, color: P, fontWeight: 600, marginBottom: 5 }}>{TUTOR.role}</div>
-            <div style={{ fontSize: 12, color: T2, lineHeight: 1.6 }}>{TUTOR.bio}</div>
+        ))}
+
+        {/* Tutor card */}
+        <div style={{ margin: '20px 16px 16px', padding: '14px', borderRadius: 12, border: `1.5px solid ${BD}`, background: BG2, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: PL, border: `2px solid ${P}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>
+            🎓
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T1 }}>Dr. Ashutosh Verma</div>
+            <div style={{ fontSize: 11, color: T3, marginTop: 2, lineHeight: 1.4 }}>12 yrs nursing education · B.Sc, M.Sc Nursing · NPrep curriculum author</div>
           </div>
         </div>
+
+        <div style={{ height: 80 }}/>
       </div>
+
+      {/* Floating tutor button */}
+      <button
+        onClick={() => setShowTutorSheet(true)}
+        style={{ position: 'absolute', bottom: 20, right: 16, width: 48, height: 48, borderRadius: '50%', background: P, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(83,74,183,0.4)', zIndex: 10 }}
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.5 9.5a2.5 2.5 0 015 0c0 2-2.5 2.5-2.5 3.5"/>
+          <circle cx="12" cy="17" r="0.8" fill="white"/>
+        </svg>
+      </button>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'absolute', bottom: 76, left: '50%', transform: 'translateX(-50%)', background: '#1a1a2e', color: 'white', borderRadius: 20, padding: '8px 16px', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', zIndex: 50, boxShadow: '0 4px 12px rgba(0,0,0,0.25)', pointerEvents: 'none' }}>
+          🔒 {toast}
+        </div>
+      )}
+
+      {/* Index sheet */}
+      {showIndexSheet && (
+        <div onClick={() => setShowIndexSheet(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 30, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px 20px 0 0', paddingBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px' }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: BD }}/>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 12px' }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T1 }}>Chapters</div>
+              <button onClick={() => setShowIndexSheet(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            {chapters.map((ch, i) => (
+              <button
+                key={ch.id}
+                onClick={() => jumpToChapter(ch.id)}
+                style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 20px', background: 'none', border: 'none', borderTop: `1px solid ${BD}`, cursor: 'pointer' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: P }}>{i + 1}</span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: T1 }}>{ch.name}</div>
+                    <div style={{ fontSize: 11, color: T3 }}>{ch.videos.length} videos</div>
+                  </div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Suggested order modal */}
+      {showOrderModal && (
+        <div onClick={() => setShowOrderModal(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 30, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px 20px 0 0', maxHeight: '78%', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px', flexShrink: 0 }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: BD }}/>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '6px 20px 12px', flexShrink: 0 }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: T1 }}>Suggested Order</div>
+                <div style={{ fontSize: 11, color: T3, marginTop: 3, lineHeight: 1.4, maxWidth: '85%' }}>A recommended sequence to build on each concept. You can watch any video in any order.</div>
+              </div>
+              <button onClick={() => setShowOrderModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, flexShrink: 0 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div className="scroll" style={{ overflowY: 'auto', padding: '0 16px 24px' }}>
+              {suggestedGroups.map((group, gi) => (
+                <div key={gi} style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                    Group {gi + 1}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    {group.map((video, vi) => {
+                      const status = vidStatus(video.id, videoProgress)
+                      const vidNum = gi * GROUP_SIZE + vi + 1
+                      return (
+                        <button
+                          key={video.id}
+                          onClick={() => { setShowOrderModal(false); handleVideoTap(video) }}
+                          style={{ textAlign: 'left', padding: '10px', borderRadius: 10, border: `1.5px solid ${status === 'completed' ? GREEN + '55' : BD}`, background: status === 'completed' ? GREENBG : 'white', cursor: 'pointer' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                            <div style={{ width: 20, height: 20, borderRadius: '50%', background: status === 'completed' ? GREEN : PL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {status === 'completed'
+                                ? <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><polyline points="1,4 3.5,6.5 9,1.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                : <span style={{ fontSize: 9, fontWeight: 700, color: P }}>{vidNum}</span>
+                              }
+                            </div>
+                            {status === 'paused' && <div style={{ width: 6, height: 6, borderRadius: '50%', background: P }}/>}
+                          </div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: status === 'completed' ? GREEN : T1, lineHeight: 1.35 }}>{video.title}</div>
+                          <div style={{ fontSize: 10, color: T3, marginTop: 3 }}>{video.duration}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tutor info sheet */}
+      {showTutorSheet && (
+        <div onClick={() => setShowTutorSheet(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 30, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px 20px 0 0', paddingBottom: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px' }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: BD }}/>
+            </div>
+            <div style={{ padding: '8px 20px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: PL, border: `2px solid ${P}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, flexShrink: 0 }}>🎓</div>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T1 }}>Dr. Ashutosh Verma</div>
+                  <div style={{ fontSize: 12, color: P, fontWeight: 600, marginTop: 2 }}>Lead Educator · NPrep</div>
+                </div>
+              </div>
+              <button onClick={() => setShowTutorSheet(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, flexShrink: 0, marginTop: 4 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div style={{ padding: '14px 20px 0' }}>
+              <div style={{ fontSize: 13, color: T2, lineHeight: 1.6, marginBottom: 12 }}>
+                Over 12 years teaching nursing students across India. Designed the NPrep curriculum to bridge the gap between textbook learning and clinical reasoning for Indian nursing exams.
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {['B.Sc Nursing', 'M.Sc Nursing', 'Ex-AIIMS Faculty', 'NPrep Curriculum'].map(tag => (
+                  <span key={tag} style={{ fontSize: 11, fontWeight: 600, color: P, background: PL, padding: '4px 10px', borderRadius: 50 }}>{tag}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
