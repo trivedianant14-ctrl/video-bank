@@ -191,6 +191,25 @@ export default function PreVideoScreen({
         <div style={{ width: 60, flexShrink: 0 }}/>
       </div>
 
+      {/* ── Filter chips — always visible, above chapter header ─────────── */}
+      <div style={{ flexShrink: 0, background: 'white', borderBottom: `1px solid ${BD}`, paddingTop: 10, paddingBottom: 10 }}>
+        <div style={{ display: 'flex', gap: 6, paddingLeft: 16, overflowX: 'auto', scrollbarWidth: 'none' }}>
+          {FILTERS.map(f => {
+            const active = activeFilter === f.id
+            return (
+              <button
+                key={f.id}
+                onClick={() => setActiveFilter(f.id)}
+                style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600, background: active ? P : 'white', color: active ? 'white' : T2, border: `1.5px solid ${active ? P : BD}`, transition: 'all 0.15s' }}
+              >
+                {f.label}
+              </button>
+            )
+          })}
+          <div style={{ width: 8, flexShrink: 0 }}/>
+        </div>
+      </div>
+
       {/* ── Dynamic sticky chapter header ────────────────────────────────── */}
       {activeChapterId && (() => {
         const ch = filteredChapters.find(c => c.id === activeChapterId)
@@ -284,25 +303,6 @@ export default function PreVideoScreen({
             </div>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
           </button>
-        </div>
-
-        {/* Filters — sticky inside scroll */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 3, background: 'white', borderBottom: `1px solid ${BD}`, paddingTop: 12, paddingBottom: 8 }}>
-          <div style={{ display: 'flex', gap: 6, paddingLeft: 16, overflowX: 'auto', scrollbarWidth: 'none' }}>
-            {FILTERS.map(f => {
-              const active = activeFilter === f.id
-              return (
-                <button
-                  key={f.id}
-                  onClick={() => setActiveFilter(f.id)}
-                  style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600, background: active ? P : 'white', color: active ? 'white' : T2, border: `1.5px solid ${active ? P : BD}`, transition: 'all 0.15s' }}
-                >
-                  {f.label}
-                </button>
-              )
-            })}
-            <div style={{ width: 8, flexShrink: 0 }}/>
-          </div>
         </div>
 
         {/* Video list */}
