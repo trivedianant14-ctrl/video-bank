@@ -43,9 +43,10 @@ export default function PreVideoScreen({
   if (!currentSubject) return null
 
   const [activeFilter,    setActiveFilter]    = useState('all')
-  const [showIndexSheet,  setShowIndexSheet]  = useState(false)
-  const [showOrderModal,  setShowOrderModal]  = useState(false)
-  const [showTutorSheet,  setShowTutorSheet]  = useState(false)
+  const [showIndexSheet,    setShowIndexSheet]    = useState(false)
+  const [showOrderModal,    setShowOrderModal]    = useState(false)
+  const [showTutorSheet,    setShowTutorSheet]    = useState(false)
+  const [showDownloadSheet, setShowDownloadSheet] = useState(false)
   const [toast,           setToast]           = useState(null)
   const [activeChapterId, setActiveChapterId] = useState(null)
 
@@ -187,8 +188,18 @@ export default function PreVideoScreen({
           </button>
         </div>
 
-        {/* Spacer to balance Back button */}
-        <div style={{ width: 60, flexShrink: 0 }}/>
+        {/* Download button (mirrors Back button width to keep title centred) */}
+        <button
+          onClick={() => setShowDownloadSheet(true)}
+          aria-label="Download videos"
+          style={{ width: 60, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0 4px 8px' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T2} strokeWidth="2.2" strokeLinecap="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7,10 12,15 17,10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
       </div>
 
       {/* ── Scrollable body ──────────────────────────────────────────────── */}
@@ -553,6 +564,48 @@ export default function PreVideoScreen({
       )}
 
       {/* Tutor info sheet */}
+      {showDownloadSheet && (
+        <div onClick={() => setShowDownloadSheet(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 30, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px 20px 0 0', paddingBottom: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px' }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: BD }}/>
+            </div>
+            <div style={{ padding: '8px 20px 14px', borderBottom: `1px solid ${BD}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: T1 }}>Download Videos</div>
+                <div style={{ fontSize: 12, color: T3, marginTop: 3 }}>Save for offline viewing</div>
+              </div>
+              <button onClick={() => setShowDownloadSheet(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            {/* Subject row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: currentSubject.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: 19, fontWeight: 900, color: currentSubject.color }}>{currentSubject.name.charAt(0)}</span>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T1 }}>{currentSubject.name}</div>
+                <div style={{ fontSize: 12, color: T3, marginTop: 2 }}>{totalCount} videos available</div>
+              </div>
+              <button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 50, border: `1.5px solid ${P}`, background: 'white', color: P, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.2" strokeLinecap="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                  <polyline points="7,10 12,15 17,10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download all
+              </button>
+            </div>
+            <div style={{ padding: '0 20px', borderTop: `1px solid ${BD}` }}>
+              <div style={{ fontSize: 11, color: T3, padding: '10px 0', lineHeight: 1.5 }}>
+                Videos will be available offline for 30 days. Requires ~{Math.round(totalCount * 150)} MB of storage.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showTutorSheet && (
         <div onClick={() => setShowTutorSheet(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 30, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px 20px 0 0', paddingBottom: 32 }}>
