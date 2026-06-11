@@ -249,22 +249,35 @@ export default function PreVideoScreen({
           )}
         </div>
 
-        {/* Suggested order CTA */}
+        {/* Expert plan CTA */}
         <div style={{ padding: '10px 16px 0' }}>
           <button
             onClick={() => setShowOrderModal(true)}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${BD}`, background: BG2, cursor: 'pointer' }}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', borderRadius: 12, border: `1.5px solid ${P}28`, background: `linear-gradient(135deg, ${PL} 0%, white 100%)`, cursor: 'pointer' }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T2} strokeWidth="2" strokeLinecap="round">
-                <rect x="3" y="3" width="7" height="7" rx="1"/>
-                <rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="3" y="14" width="7" height="7" rx="1"/>
-                <rect x="14" y="14" width="7" height="7" rx="1"/>
+            {/* Icon */}
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: P, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round">
+                <rect x="3" y="4" width="18" height="17" rx="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8"  y1="2" x2="8"  y2="6"/>
+                <line x1="3"  y1="10" x2="21" y2="10"/>
+                <line x1="8"  y1="14" x2="8"  y2="14" strokeWidth="2.5"/>
+                <line x1="12" y1="14" x2="12" y2="14" strokeWidth="2.5"/>
+                <line x1="8"  y1="18" x2="8"  y2="18" strokeWidth="2.5"/>
+                <line x1="12" y1="18" x2="12" y2="18" strokeWidth="2.5"/>
               </svg>
-              <span style={{ fontSize: 13, fontWeight: 600, color: T2 }}>View suggested order</span>
             </div>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+            {/* Text */}
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T1, marginBottom: 2 }}>
+                Dr. Amit's {suggestedGroups.length}-day learning plan
+              </div>
+              <div style={{ fontSize: 11, color: T2, lineHeight: 1.4 }}>
+                Complete {currentSubject.name} step by step — see the full roadmap
+              </div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M9 18l6-6-6-6"/></svg>
           </button>
         </div>
 
@@ -456,8 +469,8 @@ export default function PreVideoScreen({
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '6px 20px 14px', flexShrink: 0, borderBottom: `1px solid ${BD}` }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: T1 }}>Study Plan</div>
-                <div style={{ fontSize: 11, color: T3, marginTop: 3, lineHeight: 1.4 }}>Suggested order · watch any video in any order</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: T1 }}>Expert Learning Path</div>
+                <div style={{ fontSize: 11, color: T2, marginTop: 3, lineHeight: 1.4 }}>Curated by Dr. Amit Verma · Each day builds on the last</div>
               </div>
               <button onClick={() => setShowOrderModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, flexShrink: 0, marginTop: 2 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
