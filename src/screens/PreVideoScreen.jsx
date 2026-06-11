@@ -88,8 +88,8 @@ export default function PreVideoScreen({
 
   // ── filters ─────────────────────────────────────────────────────────────────
   const FILTERS = [
-    ...(isFreeTier ? [{ id: 'free',        label: 'Free'        }] : []),
     { id: 'all',         label: 'All'         },
+    ...(isFreeTier ? [{ id: 'free',        label: 'Free'        }] : []),
     { id: 'not-started', label: 'Not started' },
     { id: 'completed',   label: 'Completed'   },
     { id: 'paused',      label: 'Paused'      },
@@ -216,16 +216,16 @@ export default function PreVideoScreen({
         <div style={{ padding: '16px 16px 0' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 6 }}>
             <div>
-              <span style={{ fontSize: 22, fontWeight: 800, color: completedCount > 0 ? P : T1 }}>{completedCount}</span>
-              <span style={{ fontSize: 14, color: T3, fontWeight: 500 }}> of {totalCount} watched</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: completedCount > 0 ? P : T1 }}>{completedCount}</span>
+              <span style={{ fontSize: 13, color: T3, fontWeight: 500 }}> of {totalCount} watched</span>
             </div>
-            <span style={{ fontSize: 12, color: completedCount === totalCount && totalCount > 0 ? GREEN : T3, fontWeight: 600 }}>
+            <span style={{ fontSize: 11, color: completedCount === totalCount && totalCount > 0 ? GREEN : T3, fontWeight: 600 }}>
               {progressPct}%{completedCount === totalCount && totalCount > 0 ? ' · All done ✓' : ''}
             </span>
           </div>
-          <div style={{ height: 5, background: BD, borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ height: 3, background: BD, borderRadius: 2, overflow: 'hidden' }}>
             <div style={{
-              height: '100%', borderRadius: 3, transition: 'width 0.4s',
+              height: '100%', borderRadius: 2, transition: 'width 0.4s',
               width: `${progressPct}%`,
               background: completedCount === totalCount && totalCount > 0 ? GREEN : P,
             }}/>
@@ -286,9 +286,9 @@ export default function PreVideoScreen({
           </button>
         </div>
 
-        {/* Filters */}
-        <div style={{ padding: '14px 0 4px' }}>
-          <div style={{ display: 'flex', gap: 6, paddingLeft: 16, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none' }}>
+        {/* Filters — sticky inside scroll */}
+        <div style={{ position: 'sticky', top: 0, zIndex: 3, background: 'white', borderBottom: `1px solid ${BD}`, paddingTop: 12, paddingBottom: 8 }}>
+          <div style={{ display: 'flex', gap: 6, paddingLeft: 16, overflowX: 'auto', scrollbarWidth: 'none' }}>
             {FILTERS.map(f => {
               const active = activeFilter === f.id
               return (
@@ -330,11 +330,23 @@ export default function PreVideoScreen({
                 ? Math.round(((videoProgress[video.id]?.secondsWatched || 0) / VIDEO_DURATION_SECS) * 100)
                 : 0
 
+              const accentColor = locked ? BD
+                : status === 'completed' ? GREEN
+                : status === 'paused'    ? P
+                : 'transparent'
+
               return (
                 <button
                   key={video.id}
                   onClick={() => handleVideoTap(video)}
-                  style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', background: locked ? '#fafafa' : 'white', border: 'none', borderBottom: `1px solid ${BD}`, cursor: 'pointer' }}
+                  style={{
+                    width: '100%', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: 12,
+                    padding: '13px 16px 13px 13px',
+                    background: status === 'completed' && !locked ? '#fafffe' : locked ? '#fafafa' : 'white',
+                    border: 'none', borderBottom: `1px solid ${BD}`,
+                    borderLeft: `3px solid ${accentColor}`,
+                    cursor: 'pointer',
+                  }}
                 >
                   <div style={{ paddingTop: 2 }}>
                     <StatusDot status={locked ? 'not-started' : status}/>
