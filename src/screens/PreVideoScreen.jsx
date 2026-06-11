@@ -137,12 +137,12 @@ export default function PreVideoScreen({
     const box = scrollRef.current
     if (!box) return
     const boxTop = box.getBoundingClientRect().top
-    // Find the last chapter whose top edge has reached/passed the scroll container top
+    // threshold = filter row height so chapter name triggers at correct point
     let current = null
     for (const ch of filteredChapters) {
       const el = chapterRefs.current[ch.id]
       if (!el) continue
-      if (el.getBoundingClientRect().top - boxTop <= 1) current = ch
+      if (el.getBoundingClientRect().top - boxTop <= 50) current = ch
     }
     if (current?.id !== activeChapterRef.current?.id) {
       activeChapterRef.current = current
@@ -190,43 +190,6 @@ export default function PreVideoScreen({
         {/* Spacer to balance Back button */}
         <div style={{ width: 60, flexShrink: 0 }}/>
       </div>
-
-      {/* ── Filter chips — always visible, above chapter header ─────────── */}
-      <div style={{ flexShrink: 0, background: 'white', borderBottom: `1px solid ${BD}`, paddingTop: 10, paddingBottom: 10 }}>
-        <div style={{ display: 'flex', gap: 6, paddingLeft: 16, overflowX: 'auto', scrollbarWidth: 'none' }}>
-          {FILTERS.map(f => {
-            const active = activeFilter === f.id
-            return (
-              <button
-                key={f.id}
-                onClick={() => setActiveFilter(f.id)}
-                style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600, background: active ? P : 'white', color: active ? 'white' : T2, border: `1.5px solid ${active ? P : BD}`, transition: 'all 0.15s' }}
-              >
-                {f.label}
-              </button>
-            )
-          })}
-          <div style={{ width: 8, flexShrink: 0 }}/>
-        </div>
-      </div>
-
-      {/* ── Dynamic sticky chapter header ────────────────────────────────── */}
-      {activeChapterId && (() => {
-        const ch = filteredChapters.find(c => c.id === activeChapterId)
-        if (!ch) return null
-        const done = ch.videos.filter(v => videoProgress[v.id]?.completed).length
-        return (
-          <div
-            key={activeChapterId}
-            className="chapter-header-enter"
-            style={{ flexShrink: 0, background: 'white', borderBottom: `1px solid ${BD}`, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 8px rgba(83,74,183,0.07)' }}
-          >
-            <div style={{ width: 3, height: 16, borderRadius: 2, background: currentSubject.color || P, flexShrink: 0 }}/>
-            <span style={{ fontSize: 12, fontWeight: 700, color: T2, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{ch.name}</span>
-            <span style={{ fontSize: 11, color: T3 }}>{done}/{ch.videos.length}</span>
-          </div>
-        )
-      })()}
 
       {/* ── Scrollable body ──────────────────────────────────────────────── */}
       <div ref={scrollRef} onScroll={handleScroll} className="scroll" style={{ flex: 1, overflowY: 'auto' }}>
@@ -304,6 +267,43 @@ export default function PreVideoScreen({
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
           </button>
         </div>
+
+        {/* ── Sticky filter row ────────────────────────────── */}
+        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'white', borderBottom: `1px solid ${BD}`, paddingTop: 10, paddingBottom: 10 }}>
+          <div style={{ display: 'flex', gap: 6, paddingLeft: 16, overflowX: 'auto', scrollbarWidth: 'none' }}>
+            {FILTERS.map(f => {
+              const active = activeFilter === f.id
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setActiveFilter(f.id)}
+                  style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600, background: active ? P : 'white', color: active ? 'white' : T2, border: `1.5px solid ${active ? P : BD}`, transition: 'all 0.15s' }}
+                >
+                  {f.label}
+                </button>
+              )
+            })}
+            <div style={{ width: 8, flexShrink: 0 }}/>
+          </div>
+        </div>
+
+        {/* ── Sticky chapter indicator (below filters) ─────── */}
+        {activeChapterId && (() => {
+          const ch = filteredChapters.find(c => c.id === activeChapterId)
+          if (!ch) return null
+          const done = ch.videos.filter(v => videoProgress[v.id]?.completed).length
+          return (
+            <div
+              key={activeChapterId}
+              className="chapter-header-enter"
+              style={{ position: 'sticky', top: 49, zIndex: 8, background: 'white', borderBottom: `1px solid ${BD}`, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 6px rgba(83,74,183,0.06)' }}
+            >
+              <div style={{ width: 3, height: 16, borderRadius: 2, background: currentSubject.color || P, flexShrink: 0 }}/>
+              <span style={{ fontSize: 12, fontWeight: 700, color: T2, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{ch.name}</span>
+              <span style={{ fontSize: 11, color: T3 }}>{done}/{ch.videos.length}</span>
+            </div>
+          )
+        })()}
 
         {/* Video list */}
         {filteredChapters.length === 0 ? (
