@@ -128,6 +128,13 @@ function QuizTimerRing({ timeLeft }) {
   )
 }
 
+const DOWNLOAD_QUALITIES = [
+  { id: 'auto',   label: 'Auto',   desc: 'Adjusts to your connection · may use more space', size: '~150 MB avg', badge: 'Wi-Fi Suggested' },
+  { id: 'low',    label: 'Low',    desc: '360p · Smaller file, fastest download',            size: '~70 MB',      badge: null },
+  { id: 'medium', label: 'Medium', desc: '720p · Good balance of quality and size',          size: '~150 MB',     badge: null },
+  { id: 'high',   label: 'High',   desc: '1080p · Best quality, largest file',               size: '~280 MB',     badge: null },
+]
+
 export default function VideoPlayer({
   navigate, currentVideo,
   savedVideos = [], saveVideo, unsaveVideo,
@@ -161,6 +168,12 @@ export default function VideoPlayer({
 
   const [showSavedToast, setShowSavedToast] = useState(false)
   const savedToastTimerRef = useRef(null)
+
+  const [showDownloadQualitySheet, setShowDownloadQualitySheet] = useState(false)
+  const [downloadQuality, setDownloadQuality] = useState('auto')
+  const [saveQualitySetting, setSaveQualitySetting] = useState(true)
+  const [showDownloadToast, setShowDownloadToast] = useState(false)
+  const downloadToastTimerRef = useRef(null)
 
   const [pendingSeek, setPendingSeek] = useState(null) // { ts, name }
 
@@ -951,6 +964,23 @@ export default function VideoPlayer({
         </div>
       )}
 
+      {/* Download toast */}
+      {showDownloadToast && (
+        <div style={{
+          position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+          background: '#1a1a2e', color: 'white', padding: '10px 20px', borderRadius: 50,
+          fontSize: 12, fontWeight: 600, zIndex: 200, whiteSpace: 'nowrap',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.2" strokeLinecap="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7,10 12,15 17,10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Downloading · {DOWNLOAD_QUALITIES.find(q => q.id === downloadQuality)?.label} quality
+        </div>
+      )}
+
       {/* SCROLLABLE CONTENT */}
       <div className="scroll" style={{ flex: 1, overflowY: 'auto', background: bg, display: isFullscreen ? 'none' : undefined }}>
 
@@ -985,7 +1015,7 @@ export default function VideoPlayer({
                 {
                   id: 'download', label: 'Download', active: false, activeColor: text2, inactiveColor: text1,
                   icon: (_, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
-                  onClick: () => {},
+                  onClick: () => setShowDownloadQualitySheet(true),
                 },
                 {
                   id: 'share', label: 'Share', active: false, activeColor: text2, inactiveColor: text1,
@@ -1400,6 +1430,82 @@ export default function VideoPlayer({
       >
         Having an issue? Tap to report
       </button>
+
+      {/* ── DOWNLOAD QUALITY SHEET ── */}
+      {showDownloadQualitySheet && (
+        <div
+          onClick={() => setShowDownloadQualitySheet(false)}
+          style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.55)', zIndex: 300, display: 'flex', alignItems: 'flex-end' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: '20px 20px 0 0', padding: '20px 20px 32px', width: '100%' }}
+          >
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: BD, margin: '0 auto 18px' }} />
+            <div style={{ fontSize: 16, fontWeight: 800, color: T1, marginBottom: 3 }}>Download Quality</div>
+            <div style={{ fontSize: 12, color: T2, marginBottom: 18 }}>Choose the video quality for offline viewing</div>
+
+            {DOWNLOAD_QUALITIES.map(q => {
+              const sel = downloadQuality === q.id
+              return (
+                <button
+                  key={q.id}
+                  onClick={() => setDownloadQuality(q.id)}
+                  style={{
+                    width: '100%', textAlign: 'left', cursor: 'pointer', marginBottom: 10,
+                    border: `1.5px solid ${sel ? P : BD}`,
+                    background: sel ? PL : 'white',
+                    borderRadius: 12, padding: '12px 14px',
+                    display: 'flex', alignItems: 'center', gap: 12,
+                  }}
+                >
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                    border: `2px solid ${sel ? P : '#c0c0d8'}`,
+                    background: sel ? P : 'white',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {sel && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'white' }} />}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: sel ? P : T1 }}>{q.label}</span>
+                      {q.badge && (
+                        <span style={{ fontSize: 10, fontWeight: 600, color: '#1B7F4F', background: '#E6F7EF', border: '1px solid #5EB88A', borderRadius: 20, padding: '1px 8px' }}>
+                          {q.badge}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 11, color: T3 }}>{q.desc}</div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: T2, flexShrink: 0 }}>{q.size}</span>
+                </button>
+              )
+            })}
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0 18px', borderTop: `1px solid ${BD}`, marginTop: 4 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T1 }}>Save as default quality</div>
+                <div style={{ fontSize: 11, color: T3, marginTop: 2 }}>Use this setting for future downloads</div>
+              </div>
+              <Toggle value={saveQualitySetting} onChange={setSaveQualitySetting} />
+            </div>
+
+            <button
+              onClick={() => {
+                setShowDownloadQualitySheet(false)
+                setShowDownloadToast(true)
+                clearTimeout(downloadToastTimerRef.current)
+                downloadToastTimerRef.current = setTimeout(() => setShowDownloadToast(false), 3000)
+              }}
+              className="btn-primary"
+              style={{ width: '100%', padding: 14, fontSize: 14, fontWeight: 700 }}
+            >
+              Download · {DOWNLOAD_QUALITIES.find(q => q.id === downloadQuality)?.label} quality
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── DOUBT POPUP ── */}
       {showDoubtPopup && (
