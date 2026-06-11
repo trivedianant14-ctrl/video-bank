@@ -129,10 +129,10 @@ function QuizTimerRing({ timeLeft }) {
 }
 
 const DOWNLOAD_QUALITIES = [
-  { id: 'auto',   label: 'Auto',   desc: 'Adjusts to your connection · may use more space', size: '~150 MB avg', badge: 'Wi-Fi Suggested' },
+  { id: 'auto',   label: 'Auto',   desc: 'Adjusts to your connection · may use more space', size: '~150 MB avg', badge: null },
   { id: 'low',    label: 'Low',    desc: '360p · Smaller file, fastest download',            size: '~70 MB',      badge: null },
   { id: 'medium', label: 'Medium', desc: '720p · Good balance of quality and size',          size: '~150 MB',     badge: 'Suggested' },
-  { id: 'high',   label: 'High',   desc: '1080p · Best quality, largest file',               size: '~280 MB',     badge: null },
+  { id: 'high',   label: 'High',   desc: '1080p · Best quality, largest file',               size: '~280 MB',     badge: 'Wi-Fi Suggested' },
 ]
 
 export default function VideoPlayer({
