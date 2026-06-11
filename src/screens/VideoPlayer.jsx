@@ -16,13 +16,14 @@ const MOCK_PREV_ANSWERS = { 0: 2, 1: 1, 2: 2, 3: 1 } // Q1 wrong (Bundle of His)
 const TOPICS_COVERED = [
   { name: 'Introduction & Overview', ts: '0:00' },
   { name: 'Cardiac Anatomy', ts: '2:45' },
-  { name: 'Conduction System', ts: '6:30' },
+  { name: 'Conduction System', ts: '6:30', hasQuestion: true },
   { name: 'Cardiac Cycle', ts: '9:15' },
   { name: 'Clinical Correlations', ts: '11:00' },
 ]
 
 const TEACHER_QUESTION = {
   askedAt: '6:30',
+  askedAtSecs: 390,
   text: 'Which of the following initiates the heartbeat?',
   options: ['AV Node', 'SA Node', 'Bundle of His', 'Purkinje Fibers'],
   correct: 1,
@@ -308,16 +309,8 @@ export default function VideoPlayer({
     setDisplayProgress(progressRef.current)
   }
 
-  // Check if tapping a topic timestamp is a forward skip; warn if so
   const handleTopicClick = (topic) => {
-    const parts = topic.ts.split(':')
-    const targetSecs = parseInt(parts[0]) * 60 + parseInt(parts[1])
-    const nowSecs = Math.floor(progressRef.current * TOTAL_DURATION)
-    if (targetSecs > nowSecs) {
-      setPendingSeek({ ts: topic.ts, name: topic.name })
-    } else {
-      seekToTimestamp(topic.ts)
-    }
+    seekToTimestamp(topic.ts)
   }
 
   const handleWatchAgain = () => {
@@ -878,89 +871,136 @@ export default function VideoPlayer({
           <div style={{ fontSize: 11, color: text3 }}>Uploaded on: {uploadDate}</div>
         </div>
 
-        {/* ── Teacher's Question card (replaces Like/Dislike/etc) ── */}
-        <div style={{ padding: '14px 16px', borderBottom: `1px solid ${borderClr}`, background: darkMode ? '#16162a' : '#FAFAFF' }}>
-          {/* Header row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.2" strokeLinecap="round">
-                <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
-              </svg>
+        {/* ── Action row OR Teacher Question (mutually exclusive) ── */}
+        {displayProgress < TEACHER_QUESTION.askedAtSecs / TOTAL_DURATION ? (
+
+          /* Normal action buttons — shown before teacher question timestamp */
+          <div style={{ padding: '12px 0', borderBottom: `1px solid ${borderClr}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+              {[
+                {
+                  id: 'like', label: 'Like', active: liked, activeColor: P, inactiveColor: text1,
+                  icon: (a, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? P : 'none'} stroke={c} strokeWidth="1.8" strokeLinecap="round"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>,
+                  onClick: handleLike,
+                },
+                {
+                  id: 'dislike', label: 'Dislike', active: disliked, activeColor: '#791F1F', inactiveColor: text1,
+                  icon: (a, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? '#791F1F' : 'none'} stroke={a ? '#791F1F' : c} strokeWidth="1.8" strokeLinecap="round"><path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z"/><path d="M17 2h2.67A2.31 2.31 0 0122 4v7a2.31 2.31 0 01-2.33 2H17"/></svg>,
+                  onClick: handleDislike,
+                },
+                {
+                  id: 'save', label: isSaved ? 'Saved' : 'Save', active: isSaved, activeColor: P, inactiveColor: text1,
+                  icon: (a, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? P : 'none'} stroke={a ? P : c} strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>,
+                  onClick: handleSaveVideo,
+                },
+                {
+                  id: 'download', label: 'Download', active: false, activeColor: text2, inactiveColor: text1,
+                  icon: (_, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+                  onClick: () => {},
+                },
+                {
+                  id: 'share', label: 'Share', active: false, activeColor: text2, inactiveColor: text1,
+                  icon: (_, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
+                  onClick: () => {},
+                },
+              ].map(a => {
+                const iconColor = a.active ? a.activeColor : a.inactiveColor
+                return (
+                  <button
+                    key={a.id} onClick={a.onClick}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 10px' }}
+                  >
+                    {a.icon(a.active, iconColor)}
+                    <span style={{ fontSize: 10, color: a.active ? a.activeColor : text2 }}>{a.label}</span>
+                  </button>
+                )
+              })}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: P, lineHeight: 1 }}>Dr. Amit's Question</div>
-              <div style={{ fontSize: 10, color: text3, marginTop: 2 }}>
-                Pause and attempt · asked at {TEACHER_QUESTION.askedAt}
+          </div>
+
+        ) : (
+
+          /* Teacher's Question card — shown once video reaches 6:30 */
+          <div style={{ padding: '14px 16px', borderBottom: `1px solid ${borderClr}`, background: darkMode ? '#16162a' : '#FAFAFF' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.2" strokeLinecap="round">
+                  <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                </svg>
               </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: P, lineHeight: 1 }}>Dr. Amit's Question</div>
+                <div style={{ fontSize: 10, color: text3, marginTop: 2 }}>
+                  Pause and attempt · asked at {TEACHER_QUESTION.askedAt}
+                </div>
+              </div>
+              {teacherQAnswer !== null && (
+                <span style={{
+                  fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 50,
+                  background: teacherQAnswer === TEACHER_QUESTION.correct ? GREENBG : '#FCEBEB',
+                  color: teacherQAnswer === TEACHER_QUESTION.correct ? GREEN : '#791F1F',
+                }}>
+                  {teacherQAnswer === TEACHER_QUESTION.correct ? '✓ Correct' : '✗ Try again'}
+                </span>
+              )}
             </div>
+
+            <div style={{ fontSize: 13, fontWeight: 600, color: text1, lineHeight: 1.55, marginBottom: 10 }}>
+              {TEACHER_QUESTION.text}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {TEACHER_QUESTION.options.map((opt, i) => {
+                const selected = teacherQAnswer === i
+                const isCorrect = i === TEACHER_QUESTION.correct
+                let oBg = darkMode ? '#1e1e30' : 'white', oBorder = borderClr, oColor = text2
+                if (teacherQAnswer !== null) {
+                  if (isCorrect) { oBg = '#EAF3DE'; oBorder = '#97C459'; oColor = GREEN }
+                  else if (selected) { oBg = '#FCEBEB'; oBorder = '#F09595'; oColor = '#791F1F' }
+                } else if (selected) { oBg = PL; oBorder = P; oColor = PD }
+                return (
+                  <button key={i}
+                    onClick={() => { if (teacherQAnswer === null) setTeacherQAnswer(i) }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px',
+                      borderRadius: 10, border: `1.5px solid ${oBorder}`, background: oBg,
+                      color: oColor, fontSize: 13, textAlign: 'left',
+                      cursor: teacherQAnswer === null ? 'pointer' : 'default',
+                    }}
+                  >
+                    <span style={{
+                      width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                      fontSize: 10, fontWeight: 700, lineHeight: 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: `1.5px solid ${oBorder}`,
+                      background: teacherQAnswer !== null && (isCorrect || selected)
+                        ? (isCorrect ? GREEN : '#791F1F') : 'transparent',
+                      color: teacherQAnswer !== null && (isCorrect || selected) ? 'white' : oColor,
+                    }}>
+                      {['A', 'B', 'C', 'D'][i]}
+                    </span>
+                    <span style={{ flex: 1 }}>{opt}</span>
+                    {teacherQAnswer !== null && isCorrect && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg>
+                    )}
+                    {teacherQAnswer !== null && selected && !isCorrect && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#791F1F" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
             {teacherQAnswer !== null && (
-              <span style={{
-                fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 50,
-                background: teacherQAnswer === TEACHER_QUESTION.correct ? GREENBG : '#FCEBEB',
-                color: teacherQAnswer === TEACHER_QUESTION.correct ? GREEN : '#791F1F',
-              }}>
-                {teacherQAnswer === TEACHER_QUESTION.correct ? '✓ Correct' : '✗ Try again'}
-              </span>
+              <div style={{ marginTop: 10, padding: '10px 13px', borderRadius: 10, background: '#EAF3DE', border: '1px solid #97C459' }}>
+                <div style={{ fontSize: 12, color: GREEN, lineHeight: 1.6 }}>
+                  {TEACHER_QUESTION.explanation}
+                </div>
+              </div>
             )}
           </div>
 
-          {/* Question text */}
-          <div style={{ fontSize: 13, fontWeight: 600, color: text1, lineHeight: 1.55, marginBottom: 10 }}>
-            {TEACHER_QUESTION.text}
-          </div>
-
-          {/* Options */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {TEACHER_QUESTION.options.map((opt, i) => {
-              const selected = teacherQAnswer === i
-              const isCorrect = i === TEACHER_QUESTION.correct
-              let oBg = darkMode ? '#1e1e30' : 'white', oBorder = borderClr, oColor = text2
-              if (teacherQAnswer !== null) {
-                if (isCorrect) { oBg = '#EAF3DE'; oBorder = '#97C459'; oColor = GREEN }
-                else if (selected) { oBg = '#FCEBEB'; oBorder = '#F09595'; oColor = '#791F1F' }
-              } else if (selected) { oBg = PL; oBorder = P; oColor = PD }
-              return (
-                <button key={i}
-                  onClick={() => { if (teacherQAnswer === null) setTeacherQAnswer(i) }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px',
-                    borderRadius: 10, border: `1.5px solid ${oBorder}`, background: oBg,
-                    color: oColor, fontSize: 13, textAlign: 'left',
-                    cursor: teacherQAnswer === null ? 'pointer' : 'default',
-                  }}
-                >
-                  <span style={{
-                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                    fontSize: 10, fontWeight: 700, lineHeight: 1,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: `1.5px solid ${oBorder}`,
-                    background: teacherQAnswer !== null && (isCorrect || selected)
-                      ? (isCorrect ? GREEN : '#791F1F') : 'transparent',
-                    color: teacherQAnswer !== null && (isCorrect || selected) ? 'white' : oColor,
-                  }}>
-                    {['A', 'B', 'C', 'D'][i]}
-                  </span>
-                  <span style={{ flex: 1 }}>{opt}</span>
-                  {teacherQAnswer !== null && isCorrect && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg>
-                  )}
-                  {teacherQAnswer !== null && selected && !isCorrect && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#791F1F" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Explanation */}
-          {teacherQAnswer !== null && (
-            <div style={{ marginTop: 10, padding: '10px 13px', borderRadius: 10, background: '#EAF3DE', border: '1px solid #97C459' }}>
-              <div style={{ fontSize: 12, color: GREEN, lineHeight: 1.6 }}>
-                {TEACHER_QUESTION.explanation}
-              </div>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: `1px solid ${borderClr}` }}>
@@ -1006,6 +1046,11 @@ export default function VideoPlayer({
                   <span style={{ fontSize: 11, fontWeight: 700, color: P, minWidth: 30, flexShrink: 0 }}>{topic.ts}</span>
                   <div style={{ width: 1, height: 16, background: borderClr, flexShrink: 0 }} />
                   <span style={{ fontSize: 13, color: text1, flex: 1 }}>{topic.name}</span>
+                  {topic.hasQuestion && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: P, background: PL, padding: '2px 7px', borderRadius: 50, flexShrink: 0, marginRight: 4 }}>
+                      Q
+                    </span>
+                  )}
                   <svg style={{ flexShrink: 0 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={text3} strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
               ))}
