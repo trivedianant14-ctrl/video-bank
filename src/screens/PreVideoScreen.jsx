@@ -183,7 +183,7 @@ export default function PreVideoScreen({
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0 0', display: 'inline-flex', alignItems: 'center', gap: 4 }}
           >
             <span style={{ fontSize: 11, color: T3 }}>🎓</span>
-            <span style={{ fontSize: 11, color: T3, fontWeight: 500 }}>Dr. Ashutosh Verma</span>
+            <span style={{ fontSize: 11, color: T3, fontWeight: 500 }}>Dr. Amit Verma</span>
           </button>
         </div>
 
@@ -433,55 +433,95 @@ export default function PreVideoScreen({
         </div>
       )}
 
-      {/* Suggested order modal */}
+      {/* Suggested order modal — day-wise timeline */}
       {showOrderModal && (
         <div onClick={() => setShowOrderModal(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 30, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px 20px 0 0', maxHeight: '78%', display: 'flex', flexDirection: 'column' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px 20px 0 0', maxHeight: '82%', display: 'flex', flexDirection: 'column' }}>
+            {/* Handle */}
             <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px', flexShrink: 0 }}>
               <div style={{ width: 36, height: 4, borderRadius: 2, background: BD }}/>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '6px 20px 12px', flexShrink: 0 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '6px 20px 14px', flexShrink: 0, borderBottom: `1px solid ${BD}` }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: T1 }}>Suggested Order</div>
-                <div style={{ fontSize: 11, color: T3, marginTop: 3, lineHeight: 1.4, maxWidth: '85%' }}>A recommended sequence to build on each concept. You can watch any video in any order.</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: T1 }}>Study Plan</div>
+                <div style={{ fontSize: 11, color: T3, marginTop: 3, lineHeight: 1.4 }}>Suggested order · watch any video in any order</div>
               </div>
-              <button onClick={() => setShowOrderModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, flexShrink: 0 }}>
+              <button onClick={() => setShowOrderModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, flexShrink: 0, marginTop: 2 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
-            <div className="scroll" style={{ overflowY: 'auto', padding: '0 16px 24px' }}>
-              {suggestedGroups.map((group, gi) => (
-                <div key={gi} style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                    Group {gi + 1}
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    {group.map((video, vi) => {
-                      const status = vidStatus(video.id, videoProgress)
-                      const vidNum = gi * GROUP_SIZE + vi + 1
-                      return (
-                        <button
-                          key={video.id}
-                          onClick={() => { setShowOrderModal(false); handleVideoTap(video) }}
-                          style={{ textAlign: 'left', padding: '10px', borderRadius: 10, border: `1.5px solid ${status === 'completed' ? GREEN + '55' : BD}`, background: status === 'completed' ? GREENBG : 'white', cursor: 'pointer' }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                            <div style={{ width: 20, height: 20, borderRadius: '50%', background: status === 'completed' ? GREEN : PL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {status === 'completed'
-                                ? <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><polyline points="1,4 3.5,6.5 9,1.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                : <span style={{ fontSize: 9, fontWeight: 700, color: P }}>{vidNum}</span>
-                              }
+            {/* Timeline scroll area */}
+            <div className="scroll" style={{ overflowY: 'auto', padding: '20px 20px 32px' }}>
+              {suggestedGroups.map((group, gi) => {
+                const dayNum    = gi + 1
+                const isLast    = gi === suggestedGroups.length - 1
+                const doneCount = group.filter(v => vidStatus(v.id, videoProgress) === 'completed').length
+                const allDone   = doneCount === group.length
+                const anyDone   = doneCount > 0
+                const badgeBg   = allDone ? GREEN : anyDone ? P : 'white'
+                const badgeText = allDone || anyDone ? 'white' : P
+
+                return (
+                  <div key={gi} style={{ display: 'flex', gap: 0 }}>
+
+                    {/* ── Timeline column ───────────────────── */}
+                    <div style={{ width: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                      {/* Day badge */}
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: badgeBg, border: `2px solid ${allDone ? GREEN : P}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 1 }}>
+                        {allDone
+                          ? <svg width="13" height="10" viewBox="0 0 13 10" fill="none"><polyline points="1,5 4.5,8.5 12,1.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          : <span style={{ fontSize: 11, fontWeight: 800, color: badgeText }}>{dayNum}</span>
+                        }
+                      </div>
+                      {/* Connector line */}
+                      {!isLast && (
+                        <div style={{ flex: 1, minHeight: 16, width: 2, background: allDone ? GREEN + '55' : BD, borderRadius: 1, margin: '2px 0' }}/>
+                      )}
+                    </div>
+
+                    {/* ── Day content ───────────────────────── */}
+                    <div style={{ flex: 1, paddingBottom: isLast ? 0 : 20 }}>
+                      {/* Day label row */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 32, marginBottom: 8 }}>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: allDone ? GREEN : T1 }}>Day {dayNum}</span>
+                        <span style={{ fontSize: 11, color: allDone ? GREEN : T3, fontWeight: allDone ? 600 : 400 }}>
+                          {allDone ? `${group.length}/${group.length} done ✓` : anyDone ? `${doneCount}/${group.length} done` : `${group.length} video${group.length > 1 ? 's' : ''}`}
+                        </span>
+                      </div>
+
+                      {/* Video list */}
+                      {group.map((video, vi) => {
+                        const status    = vidStatus(video.id, videoProgress)
+                        const isLastVid = vi === group.length - 1
+                        return (
+                          <button
+                            key={video.id}
+                            onClick={() => { setShowOrderModal(false); handleVideoTap(video) }}
+                            style={{
+                              width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
+                              padding: '9px 12px',
+                              background: status === 'completed' ? GREENBG : 'white',
+                              borderRadius: 10,
+                              border: `1.5px solid ${status === 'completed' ? GREEN + '40' : BD}`,
+                              marginBottom: isLastVid ? 0 : 6,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <StatusDot status={status}/>
+                            <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: status === 'completed' ? GREEN : T1, lineHeight: 1.3 }}>
+                              {video.title}
                             </div>
-                            {status === 'paused' && <div style={{ width: 6, height: 6, borderRadius: '50%', background: P }}/>}
-                          </div>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: status === 'completed' ? GREEN : T1, lineHeight: 1.35 }}>{video.title}</div>
-                          <div style={{ fontSize: 10, color: T3, marginTop: 3 }}>{video.duration}</div>
-                        </button>
-                      )
-                    })}
+                            <span style={{ fontSize: 11, color: T3, flexShrink: 0, marginLeft: 4 }}>{video.duration}</span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M9 18l6-6-6-6"/></svg>
+                          </button>
+                        )
+                      })}
+                    </div>
+
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </div>
@@ -498,7 +538,7 @@ export default function PreVideoScreen({
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div style={{ width: 56, height: 56, borderRadius: '50%', background: PL, border: `2px solid ${P}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, flexShrink: 0 }}>🎓</div>
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: T1 }}>Dr. Ashutosh Verma</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T1 }}>Dr. Amit Verma</div>
                   <div style={{ fontSize: 12, color: P, fontWeight: 600, marginTop: 2 }}>Lead Educator · NPrep</div>
                 </div>
               </div>
