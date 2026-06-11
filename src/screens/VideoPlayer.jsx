@@ -175,6 +175,10 @@ export default function VideoPlayer({
   const [showDownloadToast, setShowDownloadToast] = useState(false)
   const downloadToastTimerRef = useRef(null)
 
+  const [showResourceSavedToast, setShowResourceSavedToast] = useState(false)
+  const [resourceSavedType, setResourceSavedType] = useState('')
+  const resourceSavedTimerRef = useRef(null)
+
   const [pendingSeek, setPendingSeek] = useState(null) // { ts, name }
 
   const [language, setLanguage] = useState('EN')
@@ -330,6 +334,10 @@ export default function VideoPlayer({
         videoTitle: title, subject: currentVideo?.subject || 'Applied Anatomy',
         savedAt: Date.now(),
       })
+      setResourceSavedType(type)
+      setShowResourceSavedToast(true)
+      clearTimeout(resourceSavedTimerRef.current)
+      resourceSavedTimerRef.current = setTimeout(() => setShowResourceSavedToast(false), 3000)
     }
   }
 
@@ -963,6 +971,21 @@ export default function VideoPlayer({
         }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill={P} stroke={P} strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
           Video added to your save list
+        </div>
+      )}
+
+      {/* Resource saved toast */}
+      {showResourceSavedToast && (
+        <div style={{
+          position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+          background: '#1a1a2e', color: 'white', padding: '10px 20px', borderRadius: 50,
+          fontSize: 12, fontWeight: 600, zIndex: 200, whiteSpace: 'nowrap',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill={P} stroke={P} strokeWidth="1.8" strokeLinecap="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
+          </svg>
+          {resourceSavedType === 'slides' ? 'Slides' : 'Notes'} added to your saved resources
         </div>
       )}
 
