@@ -92,7 +92,7 @@ export default function VideoPlayer({
   const [seekInterval, setSeekInterval] = useState(10)
   const [videoQuality, setVideoQuality] = useState('Auto')
 
-  const [activeTab, setActiveTab] = useState('topics')
+  const [activeTab, setActiveTab] = useState('resources')
   const [selfNotes, setSelfNotes] = useState('')
   const [notesSaved, setNotesSaved] = useState(false)
   const notesTimerRef = useRef(null)
@@ -392,6 +392,17 @@ export default function VideoPlayer({
               {language}
             </button>
             <button
+              onClick={e => { e.stopPropagation(); setIsPlaying(false); setShowDoubtPopup(true) }}
+              style={{
+                background: 'rgba(0,0,0,0.35)', border: '1.5px solid rgba(255,255,255,0.4)',
+                borderRadius: '50%', width: 26, height: 26,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: 700,
+              }}
+            >
+              ?
+            </button>
+            <button
               onClick={e => { e.stopPropagation(); setShowSettings(true) }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.8)', display: 'flex' }}
             >
@@ -476,20 +487,6 @@ export default function VideoPlayer({
           </div>
         </div>
 
-        {/* Doubt flag — bottom-left, always visible */}
-        <button
-          onClick={e => { e.stopPropagation(); setIsPlaying(false); setShowDoubtPopup(true) }}
-          style={{
-            position: 'absolute', bottom: 44, left: 12,
-            background: 'rgba(0,0,0,0.45)', border: '1.5px solid rgba(255,255,255,0.3)',
-            borderRadius: '50%', width: 28, height: 28,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: 700, zIndex: 5,
-          }}
-        >
-          ?
-        </button>
-
         {/* Completion overlay */}
         {showCompletionOverlay && (
           <div
@@ -551,6 +548,11 @@ export default function VideoPlayer({
                 id: 'save', label: 'Save', active: isSaved, color: P,
                 icon: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? P : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>,
                 onClick: handleSaveVideo,
+              },
+              {
+                id: 'download', label: 'Download', active: false, color: text2,
+                icon: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+                onClick: () => console.log('download', title),
               },
               {
                 id: 'share', label: 'Share', active: false, color: text2,
