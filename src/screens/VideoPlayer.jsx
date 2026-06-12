@@ -21,6 +21,18 @@ const TOPICS_COVERED = [
   { name: 'Clinical Correlations', ts: '11:00' },
 ]
 
+const VIDEO_TOPICS = {
+  v02: [
+    { name: 'Introduction & Overview', ts: '0:00' },
+    { name: 'Phases of the Cardiac Cycle', ts: '0:55' },
+    { name: 'Atrial Systole', ts: '2:30' },
+    { name: 'Ventricular Systole', ts: '4:15' },
+    { name: 'Isovolumetric Relaxation', ts: '6:00', hasQuestion: true },
+    { name: 'Ventricular Filling (Diastole)', ts: '7:30' },
+    { name: 'Heart Sounds — S1 & S2', ts: '8:30' },
+  ],
+}
+
 const TEACHER_QUESTION = {
   askedAt: '6:30',
   askedAtSecs: 390,
@@ -1209,7 +1221,7 @@ export default function VideoPlayer({
 
           {activeTab === 'topics' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {TOPICS_COVERED.map((topic, i) => (
+              {(VIDEO_TOPICS[videoId] || TOPICS_COVERED).map((topic, i) => (
                 <button
                   key={i} onClick={() => handleTopicClick(topic)}
                   style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px', borderRadius: 10, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }}
