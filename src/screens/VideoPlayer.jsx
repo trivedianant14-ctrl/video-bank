@@ -872,17 +872,6 @@ export default function VideoPlayer({
           </button>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <button
-              onClick={e => { e.stopPropagation(); setLanguage(l => l === 'EN' ? 'HI' : 'EN') }}
-              style={{
-                fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 5,
-                border: '1.5px solid rgba(255,255,255,0.5)',
-                background: language === 'HI' ? 'rgba(255,255,255,0.2)' : 'none',
-                color: 'rgba(255,255,255,0.9)', cursor: 'pointer', minWidth: 28, textAlign: 'center',
-              }}
-            >
-              {language}
-            </button>
-            <button
               onClick={e => { e.stopPropagation(); setIsPlaying(false); setShowDoubtPopup(true) }}
               style={{
                 background: 'rgba(0,0,0,0.35)', border: '1.5px solid rgba(255,255,255,0.4)',
@@ -2019,10 +2008,25 @@ export default function VideoPlayer({
               <button onClick={() => setShowSettings(false)} style={{ background: 'none', border: 'none', fontSize: 22, color: T3, cursor: 'pointer', lineHeight: 1 }}>×</button>
             </div>
 
+            <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${BD}` }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 10 }}>Video Language</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[{ id: 'EN', label: 'English' }, { id: 'HI', label: 'Hinglish' }].map(opt => (
+                  <button key={opt.id} onClick={() => setLanguage(opt.id)}
+                    style={{ flex: 1, padding: '9px 4px', borderRadius: 8, border: `1.5px solid ${language === opt.id ? P : BD}`, background: language === opt.id ? PL : 'white', color: language === opt.id ? PD : T2, fontSize: 12, fontWeight: language === opt.id ? 700 : 400, cursor: 'pointer' }}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize: 10, color: T3, marginTop: 6 }}>
+                {language === 'EN' ? 'Lectures play in English' : 'Lectures play in Hinglish (Hindi + English mix)'}
+              </div>
+            </div>
+
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, borderBottom: `1px solid ${BD}`, marginBottom: 16 }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 2 }}>Subtitles</div>
-                <div style={{ fontSize: 11, color: T3 }}>Language: {language}</div>
+                <div style={{ fontSize: 11, color: T3 }}>{subtitlesOn ? 'On' : 'Off'} · {language === 'EN' ? 'English' : 'Hinglish'}</div>
               </div>
               <Toggle value={subtitlesOn} onChange={setSubtitlesOn} />
             </div>

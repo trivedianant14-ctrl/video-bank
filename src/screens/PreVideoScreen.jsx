@@ -244,6 +244,44 @@ export default function PreVideoScreen({
           </div>
         </div>
 
+        {/* Continue / Start CTA card — inline at top, dismissible */}
+        {!ctaDismissed && cta.type !== 'all-done' && (
+          <div style={{ padding: '10px 16px 0' }}>
+            <div style={{ background: PL, borderRadius: 12, padding: '10px 12px 10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <svg width="11" height="13" viewBox="0 0 11 13" fill={P} style={{ flexShrink: 0 }}>
+                <polygon points="0,0 11,6.5 0,13"/>
+              </svg>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: P, marginBottom: 2 }}>
+                  {cta.type === 'resume' ? 'Continue where you left off' : cta.type === 'continue' ? 'Up next' : 'Start here'}
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: T1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {cta.video?.chapterName && <span style={{ color: T2 }}>{cta.video.chapterName} · </span>}
+                  {cta.video?.title}
+                </div>
+                {cta.type === 'resume' && (
+                  <div style={{ height: 2, background: `${P}28`, borderRadius: 2, overflow: 'hidden', marginTop: 4, width: '68%' }}>
+                    <div style={{ height: '100%', borderRadius: 2, background: P, width: `${cta.pct}%` }}/>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => handleVideoTap(cta.video)}
+                style={{ flexShrink: 0, background: P, color: 'white', border: 'none', borderRadius: 50, padding: '7px 13px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
+              >
+                {cta.type === 'resume' ? 'Resume' : cta.type === 'continue' ? 'Next' : 'Start'}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </button>
+              <button onClick={handleDismissCtaCard} aria-label="Dismiss"
+                style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0 2px 4px', display: 'flex' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T2} strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Expert plan CTA */}
         <div style={{ padding: '10px 16px 0' }}>
           <button
@@ -394,83 +432,20 @@ export default function PreVideoScreen({
           </div>
         ))}
 
-        <div style={{ height: !ctaDismissed && cta.type !== 'all-done' ? 120 : 80 }}/>
+        <div style={{ height: 80 }}/>
       </div>
 
-      {/* Sticky bottom CTA card */}
-      {!ctaDismissed && cta.type !== 'all-done' && (
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-          background: 'white',
-          boxShadow: '0 -2px 16px rgba(83,74,183,0.09)',
-          borderTop: `1px solid ${BD}`,
-          padding: '10px 16px 22px',
-        }}>
-          {/* Inline card — play icon · label+title · pill button · × */}
-          <div style={{ background: PL, borderRadius: 12, padding: '10px 12px 10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-
-            {/* Small play triangle — no circle */}
-            <svg width="11" height="13" viewBox="0 0 11 13" fill={P} style={{ flexShrink: 0 }}>
-              <polygon points="0,0 11,6.5 0,13"/>
-            </svg>
-
-            {/* Text block */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: P, marginBottom: 2 }}>
-                {cta.type === 'resume' ? 'Continue where you left off' : cta.type === 'continue' ? 'Up next' : 'Start here'}
-              </div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: T1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {cta.video?.chapterName && <span style={{ color: T2 }}>{cta.video.chapterName} · </span>}
-                {cta.video?.title}
-              </div>
-              {cta.type === 'resume' && (
-                <div style={{ height: 2, background: `${P}28`, borderRadius: 2, overflow: 'hidden', marginTop: 4, width: '68%' }}>
-                  <div style={{ height: '100%', borderRadius: 2, background: P, width: `${cta.pct}%` }}/>
-                </div>
-              )}
-            </div>
-
-            {/* Action pill */}
-            <button
-              onClick={() => handleVideoTap(cta.video)}
-              style={{
-                flexShrink: 0, background: P, color: 'white', border: 'none',
-                borderRadius: 50, padding: '7px 13px',
-                fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 5,
-              }}
-            >
-              {cta.type === 'resume' ? 'Resume' : cta.type === 'continue' ? 'Next' : 'Start'}
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-            </button>
-
-            {/* Dismiss × */}
-            <button
-              onClick={() => handleDismissCtaCard()}
-              aria-label="Dismiss"
-              style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0 2px 4px', display: 'flex', color: T3 }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T2} strokeWidth="2.5" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-
-          </div>
-        </div>
-      )}
-
-      {/* Floating Index button — sits above sticky card when card is visible */}
+      {/* Floating Index button */}
       {currentSubject.chapters && (
         <button
           onClick={() => setShowIndexSheet(true)}
           style={{
             position: 'absolute',
-            bottom: !ctaDismissed && cta.type !== 'all-done' ? 108 : 20,
+            bottom: 20,
             right: 16,
             width: 48, height: 48, borderRadius: '50%', background: P, border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 4px 16px rgba(83,74,183,0.4)', zIndex: 21,
-            transition: 'bottom 0.25s ease',
           }}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
