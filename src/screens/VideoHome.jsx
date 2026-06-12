@@ -130,6 +130,7 @@ export default function VideoHome({
 }) {
   const [showDownloadSheet, setShowDownloadSheet] = useState(false)
   const [yearFilter, setYearFilter] = useState('all')
+  const [sectionTab, setSectionTab] = useState('subjects')
 
   const getStats = (subject) => {
     const completed = subject.videos.filter(v => videoProgress[v.id]?.completed).length
@@ -331,105 +332,124 @@ export default function VideoHome({
 
         </div>
 
-        {/* ── SUBJECTS section ── */}
+        {/* ── SUBJECTS / ALSO ON NPREP section ── */}
         <div style={{ padding: '0 16px 28px' }}>
 
-          <div style={{ fontSize: 11, fontWeight: 700, color: T3,
-            textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-            Subjects
+          {/* Section tab toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ display: 'inline-flex', background: BD, borderRadius: 50, padding: '2px 3px', gap: 1 }}>
+              {[
+                { id: 'subjects', label: 'Subjects' },
+                { id: 'extras',   label: 'Also on NPrep' },
+              ].map(t => (
+                <button key={t.id} onClick={() => setSectionTab(t.id)}
+                  style={{ padding: '5px 14px', borderRadius: 50, border: 'none', cursor: 'pointer',
+                    fontSize: 11, fontWeight: 700,
+                    background: sectionTab === t.id ? P : 'transparent',
+                    color: sectionTab === t.id ? 'white' : T3,
+                    transition: 'all 0.15s' }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Year filter chips */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 14, overflowX: 'auto', scrollbarWidth: 'none' }}>
-            {FILTERS.map(f => {
-              const active = yearFilter === f.id
-              return (
-                <button key={f.id} onClick={() => setYearFilter(f.id)}
-                  style={{ flexShrink: 0, padding: '5px 13px', borderRadius: 50,
-                    border: `1.5px solid ${active ? P : BD}`,
-                    background: active ? P : 'white',
-                    color: active ? 'white' : T2,
-                    fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}>
-                  {f.label}
-                </button>
-              )
-            })}
-          </div>
+          {/* Year filter chips (subjects tab only) */}
+          {sectionTab === 'subjects' && (
+            <div style={{ display: 'flex', gap: 6, marginBottom: 14, overflowX: 'auto', scrollbarWidth: 'none' }}>
+              {FILTERS.map(f => {
+                const active = yearFilter === f.id
+                return (
+                  <button key={f.id} onClick={() => setYearFilter(f.id)}
+                    style={{ flexShrink: 0, padding: '5px 13px', borderRadius: 50,
+                      border: `1.5px solid ${active ? P : BD}`,
+                      background: active ? P : 'white',
+                      color: active ? 'white' : T2,
+                      fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}>
+                    {f.label}
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
           {/* Subject rows */}
-          {filteredSubjects.length > 0 ? (
+          {sectionTab === 'subjects' && (
+            filteredSubjects.length > 0 ? (
+              <div style={{ background: 'white', borderRadius: 16, overflow: 'hidden',
+                border: `1px solid ${BD}`, boxShadow: '0 2px 8px rgba(83,74,183,0.05)' }}>
+                {filteredSubjects.map((subject, i) => {
+                  const { completed, total } = getStats(subject)
+                  const pct = total > 0 ? completed / total : 0
+                  const isLast = i === filteredSubjects.length - 1
+                  return (
+                    <button key={subject.id} onClick={() => goToSubject(subject)}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 13,
+                        padding: '14px 16px', background: 'white', border: 'none',
+                        borderBottom: isLast ? 'none' : `1px solid ${BD}`,
+                        cursor: 'pointer', textAlign: 'left' }}>
+                      <div style={{ width: 46, height: 46, borderRadius: 13, background: subject.bg,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        border: `1.5px solid ${subject.color}28` }}>
+                        <span style={{ fontSize: 20, fontWeight: 900, color: subject.color, lineHeight: 1 }}>
+                          {subject.name.charAt(0)}
+                        </span>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: T1, marginBottom: 3 }}>{subject.name}</div>
+                        <div style={{ fontSize: 11, color: T3, marginBottom: 6 }}>
+                          Dr. Amit Verma · {completed}/{total} watched
+                        </div>
+                        <div style={{ height: 2.5, background: BD, borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${pct * 100}%`, background: subject.color,
+                            borderRadius: 2, transition: 'width 0.3s' }}/>
+                        </div>
+                      </div>
+                      <IconChevron/>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <div style={{ background: 'white', borderRadius: 16, padding: '28px 16px', textAlign: 'center',
+                border: `1px solid ${BD}` }}>
+                <div style={{ fontSize: 28, marginBottom: 10 }}>📖</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T2, marginBottom: 4 }}>Coming soon</div>
+                <div style={{ fontSize: 12, color: T3, lineHeight: 1.6 }}>
+                  {yearFilter === '3' ? '3rd year' : '4th year'} subjects are being added. Check back soon!
+                </div>
+              </div>
+            )
+          )}
+
+          {/* Also on NPrep rows — same card style as subjects */}
+          {sectionTab === 'extras' && (
             <div style={{ background: 'white', borderRadius: 16, overflow: 'hidden',
               border: `1px solid ${BD}`, boxShadow: '0 2px 8px rgba(83,74,183,0.05)' }}>
-              {filteredSubjects.map((subject, i) => {
-                const { completed, total } = getStats(subject)
-                const pct = total > 0 ? completed / total : 0
-                const isLast = i === filteredSubjects.length - 1
+              {EXTRA_RESOURCES.map((r, i) => {
+                const isLast = i === EXTRA_RESOURCES.length - 1
                 return (
-                  <button key={subject.id} onClick={() => goToSubject(subject)}
+                  <button key={r.id}
                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 13,
                       padding: '14px 16px', background: 'white', border: 'none',
                       borderBottom: isLast ? 'none' : `1px solid ${BD}`,
                       cursor: 'pointer', textAlign: 'left' }}>
-                    <div style={{ width: 46, height: 46, borderRadius: 13, background: subject.bg,
+                    <div style={{ width: 46, height: 46, borderRadius: 13, background: r.bg,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                      border: `1.5px solid ${subject.color}28` }}>
-                      <span style={{ fontSize: 20, fontWeight: 900, color: subject.color, lineHeight: 1 }}>
-                        {subject.name.charAt(0)}
-                      </span>
+                      border: `1.5px solid ${r.color}28` }}>
+                      <span style={{ fontSize: 22, lineHeight: 1 }}>{r.icon}</span>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: T1, marginBottom: 3 }}>{subject.name}</div>
-                      <div style={{ fontSize: 11, color: T3, marginBottom: 6 }}>
-                        Dr. Amit Verma · {completed}/{total} watched
-                      </div>
-                      <div style={{ height: 2.5, background: BD, borderRadius: 2, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pct * 100}%`, background: subject.color,
-                          borderRadius: 2, transition: 'width 0.3s' }}/>
-                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: T1, marginBottom: 3 }}>{r.title}</div>
+                      <div style={{ fontSize: 11, color: T3 }}>{r.subtitle}</div>
                     </div>
                     <IconChevron/>
                   </button>
                 )
               })}
             </div>
-          ) : (
-            <div style={{ background: 'white', borderRadius: 16, padding: '28px 16px', textAlign: 'center',
-              border: `1px solid ${BD}` }}>
-              <div style={{ fontSize: 28, marginBottom: 10 }}>📖</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: T2, marginBottom: 4 }}>Coming soon</div>
-              <div style={{ fontSize: 12, color: T3, lineHeight: 1.6 }}>
-                {yearFilter === '3' ? '3rd year' : '4th year'} subjects are being added. Check back soon!
-              </div>
-            </div>
           )}
 
-        </div>
-
-        {/* ── Also on NPrep section ── */}
-        <div style={{ padding: '0 16px 32px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: T3,
-            textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-            Also on NPrep
-          </div>
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
-            {EXTRA_RESOURCES.map(r => (
-              <button
-                key={r.id}
-                style={{
-                  flexShrink: 0, width: 130, borderRadius: 16,
-                  background: r.bg, border: `1.5px solid ${r.color}28`,
-                  padding: '14px 12px', cursor: 'pointer', textAlign: 'left',
-                  display: 'flex', flexDirection: 'column', gap: 10,
-                }}
-              >
-                <div style={{ fontSize: 26, lineHeight: 1 }}>{r.icon}</div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: r.color, lineHeight: 1.2 }}>{r.title}</div>
-                  <div style={{ fontSize: 11, color: r.color, opacity: 0.75, marginTop: 3 }}>{r.subtitle}</div>
-                </div>
-              </button>
-            ))}
-          </div>
         </div>
 
       </div>
