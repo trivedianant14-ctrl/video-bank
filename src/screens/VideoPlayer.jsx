@@ -161,6 +161,7 @@ export default function VideoPlayer({
   const [showControls, setShowControls] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const playerContainerRef = useRef(null)
+  const scrubberRef = useRef(null)
   const [playerDims, setPlayerDims] = useState({ w: 430, h: 844 })
 
   const [showSettings, setShowSettings] = useState(false)
@@ -441,6 +442,32 @@ export default function VideoPlayer({
 
   const handleTopicClick = (topic) => {
     seekToTimestamp(topic.ts)
+  }
+
+  // Scrubber seek — pointer capture lets drag work without global listeners
+  const seekFromPointer = (clientX) => {
+    if (!scrubberRef.current) return
+    const rect = scrubberRef.current.getBoundingClientRect()
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+    progressRef.current = pct
+    setDisplayProgress(pct)
+    if (pct < COMPLETION_THRESHOLD) {
+      completionTriggeredRef.current = false
+      setShowCompletionOverlay(false)
+      setVideoEndedNoAutoplay(false)
+    }
+  }
+
+  const handleScrubberPointerDown = (e) => {
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    seekFromPointer(e.clientX)
+  }
+
+  const handleScrubberPointerMove = (e) => {
+    if (e.buttons === 0) return
+    e.stopPropagation()
+    seekFromPointer(e.clientX)
   }
 
   const handleWatchAgain = () => {
@@ -948,13 +975,16 @@ export default function VideoPlayer({
             </div>
           </div>
 
-          <div style={{ position: 'relative', height: 14, display: 'flex', alignItems: 'center' }}>
-            <div style={{ position: 'absolute', left: 0, right: 0, height: ctrlsVisible ? 3 : 2, background: 'rgba(255,255,255,0.25)', borderRadius: 2, transition: 'height 0.15s' }}>
+          <div
+            ref={scrubberRef}
+            onPointerDown={handleScrubberPointerDown}
+            onPointerMove={handleScrubberPointerMove}
+            style={{ position: 'relative', height: 20, display: 'flex', alignItems: 'center', cursor: 'pointer', touchAction: 'none' }}
+          >
+            <div style={{ position: 'absolute', left: 0, right: 0, height: ctrlsVisible ? 4 : 2, background: 'rgba(255,255,255,0.25)', borderRadius: 2, transition: 'height 0.15s' }}>
               <div style={{ height: '100%', width: `${displayProgress * 100}%`, background: P, borderRadius: 2 }} />
             </div>
-            {ctrlsVisible && (
-              <div style={{ position: 'absolute', left: `calc(${displayProgress * 100}% - 6px)`, width: 12, height: 12, borderRadius: '50%', background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.5)', pointerEvents: 'none' }} />
-            )}
+            <div style={{ position: 'absolute', left: `calc(${displayProgress * 100}% - 7px)`, width: 14, height: 14, borderRadius: '50%', background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.5)', pointerEvents: 'none', opacity: ctrlsVisible ? 1 : 0, transition: 'opacity 0.22s' }} />
           </div>
         </div>
 
