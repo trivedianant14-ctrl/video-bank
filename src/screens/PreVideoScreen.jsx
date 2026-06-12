@@ -66,7 +66,7 @@ export default function PreVideoScreen({
     ? currentSubject.chapters
     : [{ id: 'all', name: currentSubject.name, videos: currentSubject.videos }]
 
-  const allVideos      = chapters.flatMap(ch => ch.videos)
+  const allVideos      = chapters.flatMap(ch => ch.videos.map(v => ({ ...v, chapterName: ch.name })))
   const totalCount     = allVideos.length
   const completedCount = allVideos.filter(v => videoProgress[v.id]?.completed).length
   const progressPct    = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
@@ -409,14 +409,15 @@ export default function PreVideoScreen({
 
             {/* Text block */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: P, marginBottom: 1 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: P, marginBottom: 2 }}>
                 {cta.type === 'resume' ? 'Continue where you left off' : cta.type === 'continue' ? 'Up next' : 'Start here'}
               </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: T1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: T1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {cta.video?.chapterName && <span style={{ color: T2 }}>{cta.video.chapterName} · </span>}
                 {cta.video?.title}
               </div>
               {cta.type === 'resume' && (
-                <div style={{ height: 2, background: `${P}28`, borderRadius: 2, overflow: 'hidden', marginTop: 5, width: '70%' }}>
+                <div style={{ height: 2, background: `${P}28`, borderRadius: 2, overflow: 'hidden', marginTop: 4, width: '68%' }}>
                   <div style={{ height: '100%', borderRadius: 2, background: P, width: `${cta.pct}%` }}/>
                 </div>
               )}
