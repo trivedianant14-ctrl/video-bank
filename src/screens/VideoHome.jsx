@@ -254,7 +254,19 @@ export default function VideoHome({
         {/* Header: title + action icons */}
         <div style={{ padding: '4px 18px 14px', background: 'white', borderBottom: `1px solid ${BD}`,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 23, fontWeight: 800, color: T1, letterSpacing: '-0.4px' }}>Video Lectures</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Profile avatar */}
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: 'linear-gradient(135deg, #534AB7 0%, #7069CE 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, cursor: 'pointer',
+              boxShadow: '0 1px 4px rgba(83,74,183,0.3)',
+            }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: 'white', lineHeight: 1 }}>A</span>
+            </div>
+            <div style={{ fontSize: 23, fontWeight: 800, color: T1, letterSpacing: '-0.4px' }}>Video Lectures</div>
+          </div>
           <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <button style={{ width: 36, height: 36, borderRadius: 50, border: 'none', background: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
