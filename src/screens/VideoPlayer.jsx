@@ -148,6 +148,8 @@ export default function VideoPlayer({
   const completionTriggeredRef = useRef(false)
   const [showControls, setShowControls] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const playerContainerRef = useRef(null)
+  const [playerDims, setPlayerDims] = useState({ w: 430, h: 844 })
 
   const [showSettings, setShowSettings] = useState(false)
   const [showCompletionOverlay, setShowCompletionOverlay] = useState(false)
@@ -235,6 +237,12 @@ export default function VideoPlayer({
     && displayProgress < TEACHER_QUESTION.endsAtSecs / TOTAL_DURATION
   // In fullscreen every overlay (gear, ?, progress, time) stays visible regardless of tap state
   const ctrlsVisible = isFullscreen || showControls
+
+  // Measure phone container once on mount for landscape rotation
+  useEffect(() => {
+    const el = playerContainerRef.current
+    if (el) setPlayerDims({ w: el.offsetWidth, h: el.offsetHeight })
+  }, [])
 
   // Simulate playback
   useEffect(() => {
@@ -742,13 +750,30 @@ export default function VideoPlayer({
 
   // ─── PLAYER PHASE ─────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: bg, position: 'relative' }}>
+    <div ref={playerContainerRef} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: bg, position: 'relative' }}>
 
       {/* VIDEO AREA */}
       <div
         onClick={() => setShowControls(c => !c)}
         style={{ background: '#0d0d1a', flexShrink: 0, position: 'relative', width: '100%', aspectRatio: isFullscreen ? undefined : '16/9', flex: isFullscreen ? 1 : undefined, cursor: 'pointer', overflow: 'hidden' }}
       >
+        {/* ── LANDSCAPE WRAPPER: identity in portrait, rotated -90° in fullscreen ── */}
+        <div style={isFullscreen ? {
+          position: 'absolute',
+          width: playerDims.h,
+          height: playerDims.w,
+          top: '50%',
+          left: '50%',
+          marginLeft: -(playerDims.h / 2),
+          marginTop: -(playerDims.w / 2),
+          transform: 'rotate(-90deg)',
+          background: '#0d0d1a',
+          overflow: 'hidden',
+        } : {
+          position: 'absolute',
+          inset: 0,
+        }}>
+
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%)', pointerEvents: 'none', opacity: ctrlsVisible ? 1 : 0, transition: 'opacity 0.22s' }} />
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '45%', background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)', pointerEvents: 'none' }} />
 
@@ -950,6 +975,8 @@ export default function VideoPlayer({
             </div>
           </div>
         )}
+
+        </div>{/* end landscape wrapper */}
       </div>
 
       {/* Doubt toast */}
