@@ -6,6 +6,9 @@ const P = '#534AB7', PL = '#EEEDFE'
 const T1 = '#1a1a2e', T2 = '#5a5a78', T3 = '#9898b0', BD = '#e8e8f2', BG2 = '#f5f5fb'
 const GREEN = '#3B6D11', GREENBG = '#EAF3DE'
 
+// Tracks dismissed CTA cards for this tab session; resets on page reload
+const ctaSessionDismissed = new Set()
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function vidStatus(id, vp) {
   const p = vp[id]
@@ -43,7 +46,7 @@ export default function PreVideoScreen({
   if (!currentSubject) return null
 
   const [activeFilter,    setActiveFilter]    = useState('all')
-  const [ctaDismissed,    setCtaDismissed]    = useState(false)
+  const [, forceUpdate]                       = useState(0)
   const [showIndexSheet,    setShowIndexSheet]    = useState(false)
   const [showOrderModal,    setShowOrderModal]    = useState(false)
   const [showTutorSheet,    setShowTutorSheet]    = useState(false)
@@ -152,6 +155,10 @@ export default function PreVideoScreen({
     }
   }
 
+  const ctaKey = `${currentSubject.id}::${cta.type}`
+  const ctaDismissed = ctaSessionDismissed.has(ctaKey)
+  const handleDismissCtaCard = () => { ctaSessionDismissed.add(ctaKey); forceUpdate(n => n + 1) }
+
   const ctaLabel = cta.type === 'resume' ? 'Resume' : cta.type === 'continue' ? 'Continue with' : 'Start with'
 
   // ── render ──────────────────────────────────────────────────────────────────
@@ -189,17 +196,8 @@ export default function PreVideoScreen({
           </button>
         </div>
 
-        {/* Right icons: saved + download (match Back width so title stays centred) */}
+        {/* Right icons: download first, bookmark second — mirrors home screen order minus search */}
         <div style={{ display: 'flex', gap: 0, alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0, minWidth: 72 }}>
-          <button
-            onClick={() => navigate('saved')}
-            aria-label="Saved items"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', display: 'flex', color: T2 }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
-            </svg>
-          </button>
           <button
             onClick={() => navigate('downloads')}
             aria-label="Download videos"
@@ -209,6 +207,15 @@ export default function PreVideoScreen({
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
               <polyline points="7,10 12,15 17,10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
+          <button
+            onClick={() => navigate('saved')}
+            aria-label="Saved items"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', display: 'flex', color: T2 }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
             </svg>
           </button>
         </div>
@@ -439,7 +446,7 @@ export default function PreVideoScreen({
 
             {/* Dismiss × */}
             <button
-              onClick={() => setCtaDismissed(true)}
+              onClick={() => handleDismissCtaCard()}
               aria-label="Dismiss"
               style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0 2px 4px', display: 'flex', color: T3 }}
             >
