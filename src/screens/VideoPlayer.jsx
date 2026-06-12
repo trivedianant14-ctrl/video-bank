@@ -1892,70 +1892,100 @@ export default function VideoPlayer({
       )}
 
       {/* ── SETTINGS SHEET ── */}
-      {showSettings && (
-        <div className="overlay" onClick={() => setShowSettings(false)}>
-          <div className="sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '75vh' }}>
-            <div className="sheet-handle" />
-            <div style={{ padding: '14px 20px 32px', overflowY: 'auto' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: T1 }}>Settings</span>
-                <button onClick={() => setShowSettings(false)} style={{ background: 'none', border: 'none', fontSize: 22, color: T3, cursor: 'pointer', lineHeight: 1 }}>×</button>
-              </div>
+      {showSettings && (() => {
+        const settingsContent = (
+          <div style={{ padding: '14px 20px 32px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: T1 }}>Settings</span>
+              <button onClick={() => setShowSettings(false)} style={{ background: 'none', border: 'none', fontSize: 22, color: T3, cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, borderBottom: `1px solid ${BD}`, marginBottom: 16 }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 2 }}>Subtitles</div>
-                  <div style={{ fontSize: 11, color: T3 }}>Language: {language}</div>
-                </div>
-                <Toggle value={subtitlesOn} onChange={setSubtitlesOn} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, borderBottom: `1px solid ${BD}`, marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 2 }}>Subtitles</div>
+                <div style={{ fontSize: 11, color: T3 }}>Language: {language}</div>
               </div>
+              <Toggle value={subtitlesOn} onChange={setSubtitlesOn} />
+            </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, borderBottom: `1px solid ${BD}`, marginBottom: 16 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: T1 }}>Dark Mode</span>
-                <Toggle value={darkMode} onChange={setDarkMode} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, borderBottom: `1px solid ${BD}`, marginBottom: 16 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: T1 }}>Dark Mode</span>
+              <Toggle value={darkMode} onChange={setDarkMode} />
+            </div>
+
+            <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${BD}` }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 10 }}>Playback Speed</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {['0.75x', '1x', '1.25x', '1.5x', '2x'].map(s => (
+                  <button key={s} onClick={() => setPlaybackSpeed(s)}
+                    style={{ flex: 1, padding: '8px 2px', borderRadius: 8, border: `1.5px solid ${playbackSpeed === s ? P : BD}`, background: playbackSpeed === s ? PL : 'white', color: playbackSpeed === s ? PD : T2, fontSize: 11, fontWeight: playbackSpeed === s ? 700 : 400, cursor: 'pointer' }}>
+                    {s}
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${BD}` }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 10 }}>Playback Speed</div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {['0.75x', '1x', '1.25x', '1.5x', '2x'].map(s => (
-                    <button key={s} onClick={() => setPlaybackSpeed(s)}
-                      style={{ flex: 1, padding: '8px 2px', borderRadius: 8, border: `1.5px solid ${playbackSpeed === s ? P : BD}`, background: playbackSpeed === s ? PL : 'white', color: playbackSpeed === s ? PD : T2, fontSize: 11, fontWeight: playbackSpeed === s ? 700 : 400, cursor: 'pointer' }}>
-                      {s}
-                    </button>
-                  ))}
-                </div>
+            <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${BD}` }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 10 }}>Rewind / Forward</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[5, 10, 15].map(s => (
+                  <button key={s} onClick={() => setSeekInterval(s)}
+                    style={{ flex: 1, padding: '9px 4px', borderRadius: 8, border: `1.5px solid ${seekInterval === s ? P : BD}`, background: seekInterval === s ? PL : 'white', color: seekInterval === s ? PD : T2, fontSize: 12, fontWeight: seekInterval === s ? 700 : 400, cursor: 'pointer' }}>
+                    {s}s
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${BD}` }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 10 }}>Rewind / Forward</div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {[5, 10, 15].map(s => (
-                    <button key={s} onClick={() => setSeekInterval(s)}
-                      style={{ flex: 1, padding: '9px 4px', borderRadius: 8, border: `1.5px solid ${seekInterval === s ? P : BD}`, background: seekInterval === s ? PL : 'white', color: seekInterval === s ? PD : T2, fontSize: 12, fontWeight: seekInterval === s ? 700 : 400, cursor: 'pointer' }}>
-                      {s}s
-                    </button>
-                  ))}
-                </div>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 10 }}>Video Quality</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {['Auto', '480p', '720p', '1080p'].map(q => (
+                  <button key={q} onClick={() => setVideoQuality(q)}
+                    style={{ flex: 1, padding: '8px 2px', borderRadius: 8, border: `1.5px solid ${videoQuality === q ? P : BD}`, background: videoQuality === q ? PL : 'white', color: videoQuality === q ? PD : T2, fontSize: 11, fontWeight: videoQuality === q ? 700 : 400, cursor: 'pointer' }}>
+                    {q}
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 10 }}>Video Quality</div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {['Auto', '480p', '720p', '1080p'].map(q => (
-                    <button key={q} onClick={() => setVideoQuality(q)}
-                      style={{ flex: 1, padding: '8px 2px', borderRadius: 8, border: `1.5px solid ${videoQuality === q ? P : BD}`, background: videoQuality === q ? PL : 'white', color: videoQuality === q ? PD : T2, fontSize: 11, fontWeight: videoQuality === q ? 700 : 400, cursor: 'pointer' }}>
-                      {q}
-                    </button>
-                  ))}
-                </div>
+            <button onClick={() => setShowSettings(false)} className="btn-primary" style={{ width: '100%' }}>Done</button>
+          </div>
+        )
+
+        return isFullscreen ? (
+          /* ── Landscape: sheet rotated -90° inside same coordinate space as video controls ── */
+          <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.5)' }} onClick={() => setShowSettings(false)}>
+            <div style={{
+              position: 'absolute',
+              width: playerDims.h,
+              height: playerDims.w,
+              top: '50%',
+              left: '50%',
+              marginLeft: -(playerDims.h / 2),
+              marginTop: -(playerDims.w / 2),
+              transform: 'rotate(-90deg)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-end',
+            }}>
+              <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px 20px 0 0', maxHeight: '78%', overflowY: 'auto' }}>
+                <div className="sheet-handle" />
+                {settingsContent}
               </div>
-
-              <button onClick={() => setShowSettings(false)} className="btn-primary" style={{ width: '100%' }}>Done</button>
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          /* ── Portrait: normal bottom sheet ── */
+          <div className="overlay" onClick={() => setShowSettings(false)}>
+            <div className="sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '75vh' }}>
+              <div className="sheet-handle" />
+              {settingsContent}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
