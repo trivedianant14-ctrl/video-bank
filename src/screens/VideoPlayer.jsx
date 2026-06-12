@@ -1023,6 +1023,14 @@ export default function VideoPlayer({
               gap: 10, zIndex: 20, padding: '0 28px',
             }}
           >
+            {/* Back button — top-left */}
+            <button
+              onClick={e => { e.stopPropagation(); navigate('prevideoscreen') }}
+              style={{ position: 'absolute', top: 10, left: 12, background: 'none', border: 'none', cursor: 'pointer', color: 'white', display: 'flex', padding: 4 }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg>
+            </button>
+
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.45)', marginBottom: 8, textTransform: 'uppercase' }}>
               Video Complete
             </div>
