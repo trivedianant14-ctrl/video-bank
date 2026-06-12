@@ -53,6 +53,7 @@ export default function App() {
           <VideoHome
             navigate={goTo}
             setCurrentSubject={setCurrentSubject}
+            setCurrentVideo={setCurrentVideo}
             savedVideos={savedVideos}
             scenario={scenario}
             setScenario={setScenario}
@@ -78,6 +79,8 @@ export default function App() {
           <VideoPlayer
             navigate={goTo}
             currentVideo={currentVideo}
+            currentSubject={currentSubject}
+            setCurrentVideo={setCurrentVideo}
             savedVideos={savedVideos}
             saveVideo={saveVideo}
             unsaveVideo={unsaveVideo}

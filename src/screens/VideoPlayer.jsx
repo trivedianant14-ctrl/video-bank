@@ -148,7 +148,7 @@ const DOWNLOAD_QUALITIES = [
 ]
 
 export default function VideoPlayer({
-  navigate, currentVideo,
+  navigate, currentVideo, currentSubject, setCurrentVideo,
   savedVideos = [], saveVideo, unsaveVideo,
   savedResources = [], saveResource, unsaveResource,
   isReturningUser = false,
@@ -231,6 +231,9 @@ export default function VideoPlayer({
   const [showUpdateRequestSent, setShowUpdateRequestSent] = useState(false)
   const updateRequestTimerRef = useRef(null)
 
+  const [autoplay, setAutoplay] = useState(true)
+  const [videoEndedNoAutoplay, setVideoEndedNoAutoplay] = useState(false)
+
   const bg = darkMode ? '#0d0d1a' : 'white'
   const cardBg = darkMode ? '#1e1e30' : BG2
   const borderClr = darkMode ? '#2e2e48' : BD
@@ -242,6 +245,14 @@ export default function VideoPlayer({
   const videoId = currentVideo?.id || 'cv-part1'
   const title = currentVideo?.title || 'Cardiovascular System — Part 1'
   const uploadDate = currentVideo?.uploadDate || 'Jan 12, 2025'
+
+  // Compute next video in subject sequence
+  const subjectVideos = currentSubject?.videos || []
+  const currentIdx = subjectVideos.findIndex(v => v.id === videoId)
+  const nextVideo = (currentIdx >= 0 && currentIdx < subjectVideos.length - 1)
+    ? { ...subjectVideos[currentIdx + 1], subject: currentSubject?.name }
+    : null
+
   const isSaved = savedVideos.some(v => v.id === videoId)
   const isSlidesSaved = savedResources.some(r => r.videoId === videoId && r.type === 'slides')
   const isNotesSaved = savedResources.some(r => r.videoId === videoId && r.type === 'notes')
@@ -260,9 +271,26 @@ export default function VideoPlayer({
     if (el) setPlayerDims({ w: el.offsetWidth, h: el.offsetHeight })
   }, [])
 
+  // Reset all playback state when the video changes (auto-advance or hero jump)
+  useEffect(() => {
+    progressRef.current = 0
+    completionTriggeredRef.current = false
+    setDisplayProgress(0)
+    setIsPlaying(false)
+    setShowCompletionOverlay(false)
+    setVideoEndedNoAutoplay(false)
+    setCountdown(5)
+    setPhase('player')
+    setActiveTab('topics')
+    setTeacherQAnswer(null)
+    setShowSettings(false)
+  }, [videoId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Simulate playback
   useEffect(() => {
     if (!isPlaying) return
+    const capturedAutoplay = autoplay
+    const capturedNextVideo = nextVideo
     const t = setInterval(() => {
       const next = Math.min(progressRef.current + 0.005, 1)
       progressRef.current = next
@@ -270,17 +298,26 @@ export default function VideoPlayer({
       if (next >= COMPLETION_THRESHOLD && !completionTriggeredRef.current) {
         completionTriggeredRef.current = true
         setIsPlaying(false)
-        setShowCompletionOverlay(true)
-        setCountdown(5)
+        if (capturedAutoplay && capturedNextVideo) {
+          setShowCompletionOverlay(true)
+          setCountdown(5)
+        } else {
+          setVideoEndedNoAutoplay(true)
+        }
       }
     }, 200)
     return () => clearInterval(t)
-  }, [isPlaying])
+  }, [isPlaying]) // autoplay / nextVideo captured at play-start via local vars
 
   // Completion countdown → auto-advance to next video
   useEffect(() => {
     if (!showCompletionOverlay) return
-    if (countdown <= 0) { setShowCompletionOverlay(false); navigate('prevideoscreen'); return }
+    if (countdown <= 0) {
+      setShowCompletionOverlay(false)
+      if (nextVideo && setCurrentVideo) setCurrentVideo(nextVideo)
+      else navigate('prevideoscreen')
+      return
+    }
     const t = setTimeout(() => setCountdown(c => c - 1), 1000)
     return () => clearTimeout(t)
   }, [showCompletionOverlay, countdown])
@@ -410,7 +447,7 @@ export default function VideoPlayer({
     progressRef.current = 0; completionTriggeredRef.current = false
     setDisplayProgress(0); setPhase('player')
     setQuizQIndex(0); setQuizAnswers({}); setQuizPhase('questions')
-    setShowCompletionOverlay(false); setIsPlaying(false)
+    setShowCompletionOverlay(false); setVideoEndedNoAutoplay(false); setIsPlaying(false)
   }
 
   const currentQuizQ = QUIZ_QUESTIONS[quizQIndex]
@@ -921,7 +958,7 @@ export default function VideoPlayer({
           </div>
         </div>
 
-        {/* Completion overlay */}
+        {/* Completion overlay — autoplay ON */}
         {showCompletionOverlay && (
           <div
             onClick={e => e.stopPropagation()}
@@ -941,14 +978,23 @@ export default function VideoPlayer({
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,0.4)"><polygon points="5,3 19,12 5,21"/></svg>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'white', lineHeight: 1.35, marginBottom: 3 }}>Cardiovascular System — Part 2</div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>Applied Anatomy · 14 min</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'white', lineHeight: 1.35, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {nextVideo?.title || 'Cardiovascular System — Part 2'}
+                </div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
+                  {nextVideo?.subject || currentSubject?.name || 'Applied Anatomy'} · 14 min
+                </div>
               </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 280 }}>
+              {/* Tap to skip countdown and go immediately */}
               <button
-                onClick={() => { setShowCompletionOverlay(false); navigate('prevideoscreen') }}
+                onClick={() => {
+                  setShowCompletionOverlay(false)
+                  if (nextVideo && setCurrentVideo) setCurrentVideo(nextVideo)
+                  else navigate('prevideoscreen')
+                }}
                 style={{ width: '100%', padding: '12px 16px', borderRadius: 50, background: 'white', border: 'none', color: T1, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill={P}><polygon points="5,3 19,12 5,21"/></svg>
@@ -963,6 +1009,41 @@ export default function VideoPlayer({
               >
                 🎯 Practice this topic first
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* End screen — autoplay OFF */}
+        {videoEndedNoAutoplay && (
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'absolute', inset: 0, background: 'rgba(10,10,30,0.9)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: 10, zIndex: 20, padding: '0 28px',
+            }}
+          >
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.45)', marginBottom: 8, textTransform: 'uppercase' }}>
+              Video Complete
+            </div>
+            <div style={{ fontSize: 26, marginBottom: 4 }}>✓</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 280 }}>
+              <button
+                onClick={handleWatchAgain}
+                style={{ width: '100%', padding: '12px 16px', borderRadius: 50, background: 'transparent', border: '1.5px solid rgba(255,255,255,0.3)', color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+                Replay
+              </button>
+              {nextVideo && (
+                <button
+                  onClick={() => { setVideoEndedNoAutoplay(false); if (setCurrentVideo) setCurrentVideo(nextVideo) }}
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: 50, background: 'white', border: 'none', color: T1, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill={P}><polygon points="5,3 19,12 5,21"/></svg>
+                  Continue to next video
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -1937,7 +2018,7 @@ export default function VideoPlayer({
               </div>
             </div>
 
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${BD}` }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 10 }}>Video Quality</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 {['Auto', '480p', '720p', '1080p'].map(q => (
@@ -1947,6 +2028,16 @@ export default function VideoPlayer({
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 2 }}>Autoplay next video</div>
+                <div style={{ fontSize: 11, color: T3 }}>
+                  {autoplay ? 'Plays next video after countdown' : 'Stays here when video ends'}
+                </div>
+              </div>
+              <Toggle value={autoplay} onChange={setAutoplay} />
             </div>
 
             <button onClick={() => setShowSettings(false)} className="btn-primary" style={{ width: '100%' }}>Done</button>

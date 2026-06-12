@@ -125,7 +125,7 @@ const NavIcon = ({ id, active }) => {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function VideoHome({
-  navigate, setCurrentSubject, savedVideos = [],
+  navigate, setCurrentSubject, setCurrentVideo, savedVideos = [],
   scenario, setScenario, isFreeTier, setIsFreeTier, videoProgress = {},
 }) {
   const [showDownloadSheet, setShowDownloadSheet] = useState(false)
@@ -146,15 +146,29 @@ export default function VideoHome({
     .sort((a, b) => (videoProgress[b.id]?.lastWatched || 0) - (videoProgress[a.id]?.lastWatched || 0))
 
   let hero
+  let heroVideo = allVids[0] || null
   if (resumeVids.length > 0) {
     hero = { label: 'CONTINUE LEARNING', title: resumeVids[0].title, sub: `${primary.name} · ${completedVids.length}/${allVids.length} watched`, btn: 'Resume' }
+    heroVideo = resumeVids[0]
   } else if (completedVids.length > 0 && completedVids.length < allVids.length) {
     const next = allVids.find(v => !videoProgress[v.id]?.completed)
     hero = { label: 'UP NEXT', title: next.title, sub: `${primary.name} · ${completedVids.length}/${allVids.length} watched`, btn: 'Continue' }
+    heroVideo = next
   } else if (completedVids.length === allVids.length && allVids.length > 0) {
     hero = { label: 'COMPLETED ✓', title: "You've finished Applied Anatomy!", sub: `${allVids.length}/${allVids.length} watched`, btn: 'Review' }
+    heroVideo = allVids[0]
   } else {
     hero = { label: 'RECOMMENDED FOR YOU', title: 'Start your first lecture', sub: `${primary.name} · ${allVids.length} lectures`, btn: 'Begin' }
+  }
+
+  const handleHeroClick = () => {
+    setCurrentSubject(primary)
+    if (heroVideo && setCurrentVideo) {
+      setCurrentVideo({ ...heroVideo, subject: primary.name })
+      navigate('videoplayer')
+    } else {
+      navigate('prevideoscreen')
+    }
   }
 
   const filteredSubjects = yearFilter === 'all'
@@ -269,7 +283,7 @@ export default function VideoHome({
             boxShadow: '0 6px 24px rgba(83,74,183,0.18)' }}>
 
             {/* Gradient tap area */}
-            <button onClick={() => goToSubject(primary)}
+            <button onClick={handleHeroClick}
               style={{ width: '100%',
                 background: 'linear-gradient(135deg, #2a2478 0%, #534AB7 55%, #7069CE 100%)',
                 padding: '18px 16px 20px', display: 'flex', alignItems: 'center', gap: 14,
@@ -306,7 +320,7 @@ export default function VideoHome({
                   <div style={{ fontSize: 10, color: T3, marginTop: 1 }}>Applied Anatomy</div>
                 </div>
               </div>
-              <button onClick={() => goToSubject(primary)}
+              <button onClick={handleHeroClick}
                 style={{ display: 'flex', alignItems: 'center', gap: 4, background: P, color: 'white',
                   border: 'none', borderRadius: 50, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                 {hero.btn}
