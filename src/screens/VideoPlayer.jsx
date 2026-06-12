@@ -248,7 +248,8 @@ export default function VideoPlayer({
 
   const currentSecs = Math.floor(displayProgress * TOTAL_DURATION)
   const currentTime = `${Math.floor(currentSecs / 60)}:${String(currentSecs % 60).padStart(2, '0')}`
-  const teacherQActive = displayProgress >= TEACHER_QUESTION.askedAtSecs / TOTAL_DURATION
+  const teacherQActive = videoId !== 'v02'
+    && displayProgress >= TEACHER_QUESTION.askedAtSecs / TOTAL_DURATION
     && displayProgress < TEACHER_QUESTION.endsAtSecs / TOTAL_DURATION
   // In fullscreen every overlay (gear, ?, progress, time) stays visible regardless of tap state
   const ctrlsVisible = isFullscreen || showControls
@@ -1227,9 +1228,9 @@ export default function VideoPlayer({
                 </svg>
               </div>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: text1, marginBottom: 6 }}>Timestamps coming soon</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: text1, marginBottom: 6 }}>Topics coming soon</div>
                 <div style={{ fontSize: 12, color: text2, lineHeight: 1.65, maxWidth: 240, margin: '0 auto' }}>
-                  Chapter timestamps for this video are being mapped and will appear here very soon.
+                  We're adding chapter topics for this video and they'll appear here very soon.
                 </div>
               </div>
             </div>
