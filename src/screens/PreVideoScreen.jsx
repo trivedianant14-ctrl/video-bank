@@ -6,9 +6,6 @@ const P = '#534AB7', PL = '#EEEDFE'
 const T1 = '#1a1a2e', T2 = '#5a5a78', T3 = '#9898b0', BD = '#e8e8f2', BG2 = '#f5f5fb'
 const GREEN = '#3B6D11', GREENBG = '#EAF3DE'
 
-// Tracks dismissed CTA cards for this tab session; resets on page reload
-const ctaSessionDismissed = new Set()
-
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function vidStatus(id, vp) {
   const p = vp[id]
@@ -46,7 +43,6 @@ export default function PreVideoScreen({
   if (!currentSubject) return null
 
   const [activeFilter,    setActiveFilter]    = useState('all')
-  const [, forceUpdate]                       = useState(0)
   const [showIndexSheet,    setShowIndexSheet]    = useState(false)
   const [showOrderModal,    setShowOrderModal]    = useState(false)
   const [showTutorSheet,    setShowTutorSheet]    = useState(false)
@@ -155,12 +151,6 @@ export default function PreVideoScreen({
     }
   }
 
-  const ctaKey = `${currentSubject.id}::${cta.type}`
-  const ctaDismissed = ctaSessionDismissed.has(ctaKey)
-  const handleDismissCtaCard = () => { ctaSessionDismissed.add(ctaKey); forceUpdate(n => n + 1) }
-
-  const ctaLabel = cta.type === 'resume' ? 'Resume' : cta.type === 'continue' ? 'Continue with' : 'Start with'
-
   // ── render ──────────────────────────────────────────────────────────────────
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'white', position: 'relative', overflow: 'hidden' }}>
@@ -244,40 +234,59 @@ export default function PreVideoScreen({
           </div>
         </div>
 
-        {/* Continue / Start CTA card — inline at top, dismissible */}
-        {!ctaDismissed && cta.type !== 'all-done' && (
-          <div style={{ padding: '10px 16px 0' }}>
-            <div style={{ background: PL, borderRadius: 12, padding: '10px 12px 10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <svg width="11" height="13" viewBox="0 0 11 13" fill={P} style={{ flexShrink: 0 }}>
-                <polygon points="0,0 11,6.5 0,13"/>
-              </svg>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: P, marginBottom: 2 }}>
-                  {cta.type === 'resume' ? 'Continue where you left off' : cta.type === 'continue' ? 'Up next' : 'Start here'}
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: T1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {cta.video?.chapterName && <span style={{ color: T2 }}>{cta.video.chapterName} · </span>}
-                  {cta.video?.title}
-                </div>
-                {cta.type === 'resume' && (
-                  <div style={{ height: 2, background: `${P}28`, borderRadius: 2, overflow: 'hidden', marginTop: 4, width: '68%' }}>
-                    <div style={{ height: '100%', borderRadius: 2, background: P, width: `${cta.pct}%` }}/>
-                  </div>
-                )}
-              </div>
+        {/* Continue / Start CTA card — hero-sized, inline at top */}
+        {cta.type !== 'all-done' && (
+          <div style={{ padding: '12px 16px 0' }}>
+            <div style={{ borderRadius: 18, overflow: 'hidden', boxShadow: '0 6px 24px rgba(83,74,183,0.18)', border: '1.5px solid rgba(83,74,183,0.22)' }}>
+
+              {/* Gradient tap area */}
               <button
                 onClick={() => handleVideoTap(cta.video)}
-                style={{ flexShrink: 0, background: P, color: 'white', border: 'none', borderRadius: 50, padding: '7px 13px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
+                style={{ width: '100%', background: 'linear-gradient(135deg, #2a2478 0%, #534AB7 55%, #7069CE 100%)', padding: '18px 16px 20px', display: 'flex', alignItems: 'center', gap: 14, border: 'none', cursor: 'pointer', textAlign: 'left' }}
               >
-                {cta.type === 'resume' ? 'Resume' : cta.type === 'continue' ? 'Next' : 'Start'}
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'rgba(255,255,255,0.16)', border: '1.5px solid rgba(255,255,255,0.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="14" height="16" viewBox="0 0 11 13" fill="white"><polygon points="0,0 11,6.5 0,13"/></svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.62)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>
+                    {cta.type === 'resume' ? 'Continue where you left off' : cta.type === 'continue' ? 'Up next' : 'Start here'}
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: 'white', lineHeight: 1.25, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {cta.video?.title}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.72)' }}>
+                    {cta.video?.chapterName
+                      ? `${cta.video.chapterName}${cta.type === 'resume' ? ` · ${cta.pct}% watched` : ''}`
+                      : currentSubject.name}
+                  </div>
+                  {cta.type === 'resume' && (
+                    <div style={{ height: 3, background: 'rgba(255,255,255,0.22)', borderRadius: 2, overflow: 'hidden', marginTop: 8, width: '65%' }}>
+                      <div style={{ height: '100%', borderRadius: 2, background: 'rgba(255,255,255,0.85)', width: `${cta.pct}%` }}/>
+                    </div>
+                  )}
+                </div>
               </button>
-              <button onClick={handleDismissCtaCard} aria-label="Dismiss"
-                style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0 2px 4px', display: 'flex' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T2} strokeWidth="2.5" strokeLinecap="round">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
+
+              {/* Instructor + CTA row */}
+              <div style={{ background: 'white', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: P, flexShrink: 0 }}>
+                    A
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: T1, lineHeight: 1 }}>Dr. Amit Verma</div>
+                    <div style={{ fontSize: 10, color: T3, marginTop: 1 }}>{currentSubject.name}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleVideoTap(cta.video)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, background: P, color: 'white', border: 'none', borderRadius: 50, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {cta.type === 'resume' ? 'Resume' : cta.type === 'continue' ? 'Continue' : 'Start'}
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+              </div>
+
             </div>
           </div>
         )}

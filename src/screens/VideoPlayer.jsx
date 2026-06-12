@@ -199,7 +199,7 @@ export default function VideoPlayer({
 
   const [pendingSeek, setPendingSeek] = useState(null) // { ts, name }
 
-  const [language, setLanguage] = useState('EN')
+  const [language, setLanguage] = useState('HI')
   const [darkMode, setDarkMode] = useState(false)
   const [subtitlesOn, setSubtitlesOn] = useState(true)
   const [playbackSpeed, setPlaybackSpeed] = useState('1x')
