@@ -43,6 +43,7 @@ export default function PreVideoScreen({
   if (!currentSubject) return null
 
   const [activeFilter,    setActiveFilter]    = useState('all')
+  const [ctaDismissed,    setCtaDismissed]    = useState(false)
   const [showIndexSheet,    setShowIndexSheet]    = useState(false)
   const [showOrderModal,    setShowOrderModal]    = useState(false)
   const [showTutorSheet,    setShowTutorSheet]    = useState(false)
@@ -236,41 +237,6 @@ export default function PreVideoScreen({
           </div>
         </div>
 
-        {/* Continue/Resume card */}
-        <div style={{ padding: '12px 16px 0' }}>
-          {cta.type === 'all-done' ? (
-            <div style={{ background: GREENBG, borderRadius: 12, border: `1.5px solid ${GREEN}44`, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill={GREEN}/><polyline points="5,10.5 8.5,14 15,6.5" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: GREEN }}>All done!</div>
-                <div style={{ fontSize: 11, color: GREEN, opacity: 0.8 }}>You've completed all videos in this subject.</div>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => handleVideoTap(cta.video)}
-              style={{ width: '100%', textAlign: 'left', background: PL, borderRadius: 12, border: `1.5px solid ${P}22`, padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}
-            >
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: P, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="white"><polygon points="4,3 17,10 4,17"/></svg>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: P, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{ctaLabel}</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: T1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cta.video?.title}</div>
-                {cta.type === 'resume' && (
-                  <div style={{ marginTop: 6 }}>
-                    <div style={{ height: 3, background: `${P}33`, borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', borderRadius: 2, background: P, width: `${cta.pct}%` }}/>
-                    </div>
-                    <div style={{ fontSize: 10, color: P, fontWeight: 600, marginTop: 3 }}>{cta.pct}% watched</div>
-                  </div>
-                )}
-              </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
-            </button>
-          )}
-        </div>
-
         {/* Expert plan CTA */}
         <div style={{ padding: '10px 16px 0' }}>
           <button
@@ -421,14 +387,70 @@ export default function PreVideoScreen({
           </div>
         ))}
 
-        <div style={{ height: 80 }}/>
+        <div style={{ height: !ctaDismissed && cta.type !== 'all-done' ? 120 : 80 }}/>
       </div>
 
-      {/* Floating Index button */}
+      {/* Sticky bottom CTA card */}
+      {!ctaDismissed && cta.type !== 'all-done' && (
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+          background: 'white',
+          boxShadow: '0 -4px 24px rgba(0,0,0,0.10)',
+          borderTop: `1px solid ${BD}`,
+          padding: '10px 16px 20px',
+        }}>
+          <button
+            onClick={() => handleVideoTap(cta.video)}
+            style={{ width: '100%', textAlign: 'left', background: PL, borderRadius: 12, border: `1.5px solid ${P}22`, padding: '11px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}
+          >
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: P, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="white"><polygon points="4,3 17,10 4,17"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0, paddingRight: 28 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: P, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{ctaLabel}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cta.video?.title}</div>
+              {cta.type === 'resume' && (
+                <div style={{ marginTop: 5 }}>
+                  <div style={{ height: 3, background: `${P}33`, borderRadius: 2, overflow: 'hidden', width: '65%' }}>
+                    <div style={{ height: '100%', borderRadius: 2, background: P, width: `${cta.pct}%` }}/>
+                  </div>
+                  <div style={{ fontSize: 10, color: P, fontWeight: 600, marginTop: 2 }}>{cta.pct}% watched</div>
+                </div>
+              )}
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+            {/* Dismiss × */}
+            <button
+              onClick={e => { e.stopPropagation(); setCtaDismissed(true) }}
+              aria-label="Dismiss"
+              style={{
+                position: 'absolute', top: 6, right: 6,
+                width: 22, height: 22, borderRadius: '50%',
+                background: 'rgba(83,74,183,0.12)', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.8" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </button>
+        </div>
+      )}
+
+      {/* Floating Index button — sits above sticky card when card is visible */}
       {currentSubject.chapters && (
         <button
           onClick={() => setShowIndexSheet(true)}
-          style={{ position: 'absolute', bottom: 20, right: 16, width: 48, height: 48, borderRadius: '50%', background: P, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(83,74,183,0.4)', zIndex: 10 }}
+          style={{
+            position: 'absolute',
+            bottom: !ctaDismissed && cta.type !== 'all-done' ? 108 : 20,
+            right: 16,
+            width: 48, height: 48, borderRadius: '50%', background: P, border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 16px rgba(83,74,183,0.4)', zIndex: 21,
+            transition: 'bottom 0.25s ease',
+          }}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
             <line x1="3" y1="6"  x2="21" y2="6"/>
