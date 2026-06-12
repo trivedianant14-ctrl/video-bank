@@ -234,58 +234,43 @@ export default function PreVideoScreen({
           </div>
         </div>
 
-        {/* Continue / Start CTA card — hero-sized, inline at top */}
+        {/* Continue / Start CTA card — single gradient row */}
         {cta.type !== 'all-done' && (
           <div style={{ padding: '12px 16px 0' }}>
-            <div style={{ borderRadius: 18, overflow: 'hidden', boxShadow: '0 6px 24px rgba(83,74,183,0.18)', border: '1.5px solid rgba(83,74,183,0.22)' }}>
+            <div style={{ borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 18px rgba(83,74,183,0.22)', background: 'linear-gradient(135deg, #2a2478 0%, #534AB7 55%, #7069CE 100%)', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 14px 16px 16px' }}>
 
-              {/* Gradient tap area */}
+              {/* Play circle */}
+              <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'rgba(255,255,255,0.16)', border: '1.5px solid rgba(255,255,255,0.38)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="14" height="16" viewBox="0 0 11 13" fill="white"><polygon points="0,0 11,6.5 0,13"/></svg>
+              </div>
+
+              {/* Label + title + subtitle */}
+              <div onClick={() => handleVideoTap(cta.video)} style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.62)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
+                  {cta.type === 'resume' ? 'Continue watching' : cta.type === 'continue' ? 'Up next' : 'Start here'}
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: 'white', lineHeight: 1.25, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {cta.video?.title}
+                </div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)' }}>
+                  {cta.video?.chapterName || currentSubject.name}
+                  {cta.type === 'resume' && ` · ${cta.pct}% watched`}
+                </div>
+                {cta.type === 'resume' && (
+                  <div style={{ height: 2.5, background: 'rgba(255,255,255,0.22)', borderRadius: 2, overflow: 'hidden', marginTop: 7, width: '60%' }}>
+                    <div style={{ height: '100%', borderRadius: 2, background: 'rgba(255,255,255,0.8)', width: `${cta.pct}%` }}/>
+                  </div>
+                )}
+              </div>
+
+              {/* CTA pill — white, inside gradient */}
               <button
                 onClick={() => handleVideoTap(cta.video)}
-                style={{ width: '100%', background: 'linear-gradient(135deg, #2a2478 0%, #534AB7 55%, #7069CE 100%)', padding: '18px 16px 20px', display: 'flex', alignItems: 'center', gap: 14, border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                style={{ flexShrink: 0, background: 'white', border: 'none', borderRadius: 12, padding: '11px 16px', fontSize: 13, fontWeight: 700, color: T1, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, boxShadow: '0 2px 8px rgba(0,0,0,0.15)', whiteSpace: 'nowrap' }}
               >
-                <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'rgba(255,255,255,0.16)', border: '1.5px solid rgba(255,255,255,0.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <svg width="14" height="16" viewBox="0 0 11 13" fill="white"><polygon points="0,0 11,6.5 0,13"/></svg>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.62)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>
-                    {cta.type === 'resume' ? 'Continue where you left off' : cta.type === 'continue' ? 'Up next' : 'Start here'}
-                  </div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: 'white', lineHeight: 1.25, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {cta.video?.title}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.72)' }}>
-                    {cta.video?.chapterName
-                      ? `${cta.video.chapterName}${cta.type === 'resume' ? ` · ${cta.pct}% watched` : ''}`
-                      : currentSubject.name}
-                  </div>
-                  {cta.type === 'resume' && (
-                    <div style={{ height: 3, background: 'rgba(255,255,255,0.22)', borderRadius: 2, overflow: 'hidden', marginTop: 8, width: '65%' }}>
-                      <div style={{ height: '100%', borderRadius: 2, background: 'rgba(255,255,255,0.85)', width: `${cta.pct}%` }}/>
-                    </div>
-                  )}
-                </div>
+                {cta.type === 'resume' ? 'Resume' : cta.type === 'continue' ? 'Continue' : 'Start'}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T1} strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
               </button>
-
-              {/* Instructor + CTA row */}
-              <div style={{ background: 'white', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: P, flexShrink: 0 }}>
-                    A
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: T1, lineHeight: 1 }}>Dr. Amit Verma</div>
-                    <div style={{ fontSize: 10, color: T3, marginTop: 1 }}>{currentSubject.name}</div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleVideoTap(cta.video)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, background: P, color: 'white', border: 'none', borderRadius: 50, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-                >
-                  {cta.type === 'resume' ? 'Resume' : cta.type === 'continue' ? 'Continue' : 'Start'}
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
-                </button>
-              </div>
 
             </div>
           </div>
