@@ -1219,7 +1219,23 @@ export default function VideoPlayer({
         {/* Tab content */}
         <div style={{ padding: '12px 16px' }}>
 
-          {activeTab === 'topics' && (
+          {activeTab === 'topics' && videoId === 'v02' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '28px 8px 12px', textAlign: 'center' }}>
+              <div style={{ width: 64, height: 64, borderRadius: 18, background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="1.8" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: text1, marginBottom: 6 }}>Timestamps coming soon</div>
+                <div style={{ fontSize: 12, color: text2, lineHeight: 1.65, maxWidth: 240, margin: '0 auto' }}>
+                  Chapter timestamps for this video are being mapped and will appear here very soon.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'topics' && videoId !== 'v02' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {(VIDEO_TOPICS[videoId] || TOPICS_COVERED).map((topic, i) => (
                 <button
@@ -1240,54 +1256,71 @@ export default function VideoPlayer({
             </div>
           )}
 
-          {activeTab === 'resources' && (
+          {activeTab === 'resources' && videoId === 'v02' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '28px 8px 12px', textAlign: 'center' }}>
-              {/* Illustration */}
               <div style={{ width: 64, height: 64, borderRadius: 18, background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="1.8" strokeLinecap="round">
-                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="1.8" strokeLinecap="round">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/>
+                  <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
                 </svg>
               </div>
-
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: text1, marginBottom: 6 }}>
-                  We're adding resources quickly
-                </div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: text1, marginBottom: 6 }}>We're adding resources quickly</div>
                 <div style={{ fontSize: 12, color: text2, lineHeight: 1.65, maxWidth: 240, margin: '0 auto' }}>
-                  We're covering 1,400+ videos and will have slides & notes here very soon.
+                  Slides & notes for this video are on their way. We're covering 1,400+ videos as fast as we can.
                 </div>
               </div>
-
-              {/* Request button or confirmation */}
               {showUpdateRequestSent ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 50, background: '#EAF3DE', border: '1.5px solid #A8D57C' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" strokeWidth="2.5" strokeLinecap="round">
-                    <polyline points="20,6 9,17 4,12"/>
-                  </svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg>
                   <span style={{ fontSize: 12, fontWeight: 600, color: '#3B6D11' }}>Request received! We'll prioritize this.</span>
                 </div>
               ) : (
                 <button
-                  onClick={() => {
-                    setShowUpdateRequestSent(true)
-                    clearTimeout(updateRequestTimerRef.current)
-                  }}
-                  style={{
-                    padding: '11px 22px', borderRadius: 50, border: `1.5px solid ${P}`,
-                    background: 'none', color: P, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 7,
-                  }}
+                  onClick={() => { setShowUpdateRequestSent(true); clearTimeout(updateRequestTimerRef.current) }}
+                  style={{ padding: '11px 22px', borderRadius: 50, border: `1.5px solid ${P}`, background: 'none', color: P, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2" strokeLinecap="round">
-                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-                  </svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2" strokeLinecap="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
                   Request faster update
                 </button>
               )}
+            </div>
+          )}
 
-              <div style={{ fontSize: 10, color: text3, lineHeight: 1.5 }}>
-                Topics & chapter timestamps are already available above.
-              </div>
+          {activeTab === 'resources' && videoId !== 'v02' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                {
+                  type: 'slides', label: 'Slides', subtitle: '24 frames · auto-captured',
+                  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
+                },
+                {
+                  type: 'notes', label: 'Notes', subtitle: 'PDF · by content team',
+                  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>,
+                },
+              ].map(res => {
+                const rSaved = res.type === 'slides' ? isSlidesSaved : isNotesSaved
+                return (
+                  <div
+                    key={res.type} onClick={() => setShowResourceModal(res.type)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, border: `1px solid ${borderClr}`, background: cardBg, cursor: 'pointer' }}
+                  >
+                    <div style={{ color: P }}>{res.icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: text1 }}>{res.label}</div>
+                      <div style={{ fontSize: 11, color: text3, marginTop: 2 }}>{res.subtitle}</div>
+                    </div>
+                    <button
+                      onClick={e => { e.stopPropagation(); handleSaveResource(res.type) }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill={rSaved ? P : 'none'} stroke={rSaved ? P : text3} strokeWidth="1.8" strokeLinecap="round">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
+                      </svg>
+                    </button>
+                  </div>
+                )
+              })}
             </div>
           )}
 
@@ -1407,7 +1440,23 @@ export default function VideoPlayer({
             </div>
           )}
 
-          {activeTab === 'practice' && !isReturningUser && (
+          {activeTab === 'practice' && videoId === 'v02' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '28px 8px 12px', textAlign: 'center' }}>
+              <div style={{ width: 64, height: 64, borderRadius: 18, background: '#FFF0E6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C05C0D" strokeWidth="1.8" strokeLinecap="round">
+                  <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: text1, marginBottom: 6 }}>Practice questions coming soon</div>
+                <div style={{ fontSize: 12, color: text2, lineHeight: 1.65, maxWidth: 240, margin: '0 auto' }}>
+                  We're writing quiz questions for this video. They'll be ready very soon.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'practice' && videoId !== 'v02' && !isReturningUser && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '36px 0', textAlign: 'center' }}>
               <div style={{ fontSize: 36, marginBottom: 14 }}>📝</div>
               <div style={{ fontSize: 15, fontWeight: 700, color: text1, marginBottom: 8 }}>Test yourself</div>
@@ -1423,7 +1472,7 @@ export default function VideoPlayer({
             </div>
           )}
 
-          {activeTab === 'practice' && isReturningUser && (
+          {activeTab === 'practice' && videoId !== 'v02' && isReturningUser && (
             <div>
               {/* Previous attempt summary */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, background: '#FFF8F0', border: '1.5px solid #F0C080', marginBottom: 14 }}>
