@@ -235,6 +235,9 @@ export default function VideoPlayer({
   const [autoplay, setAutoplay] = useState(true)
   const [videoEndedNoAutoplay, setVideoEndedNoAutoplay] = useState(false)
   const [notesExpanded, setNotesExpanded] = useState(false)
+  const [slidesExpanded, setSlidesExpanded] = useState(true)
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false)
+  const [pdfCurrentPage, setPdfCurrentPage] = useState(0)
 
   const bg = darkMode ? '#0d0d1a' : 'white'
   const cardBg = darkMode ? '#1e1e30' : BG2
@@ -1383,13 +1386,57 @@ export default function VideoPlayer({
             const PdfBadge = () => (
               <span style={{ fontSize: 8, fontWeight: 800, color: 'white', background: PDF_RED, padding: '1px 5px', borderRadius: 3, letterSpacing: '0.04em' }}>PDF</span>
             )
+            /* Full-screen PDF preview modal */
+            const PDF_PAGES = [
+              {
+                title: 'Heart Anatomy',
+                heading: 'THE 4-CHAMBER HEART',
+                body: 'The human heart consists of four chambers: two atria (right and left) and two ventricles (right and left). The right atrium receives deoxygenated blood from the systemic circulation via the superior and inferior vena cava.',
+                bullets: ['Right side → pulmonary circulation (lungs)', 'Left side → systemic circulation (body)', 'Interventricular septum separates the ventricles', 'AV valves prevent backflow between chambers'],
+                note: 'Remember: "Right receives, Left leaves" — right side receives deoxygenated blood, left side delivers oxygenated blood.',
+              },
+              {
+                title: 'Conduction System',
+                heading: 'ELECTRICAL PATHWAY OF THE HEART',
+                body: 'The sinoatrial (SA) node is the natural pacemaker located in the right atrium. It generates impulses at 60–100 bpm. The signal travels to the AV node (40–60 bpm backup), then down the Bundle of His into left and right bundle branches, finally reaching the Purkinje fibres.',
+                bullets: ['SA node → AV node → Bundle of His', 'Left & right bundle branches', 'Purkinje fibre network → ventricular myocytes', 'Depolarisation precedes mechanical contraction'],
+                note: 'Key ECG correlation: PR interval = AV node conduction delay. Normal: 120–200 ms.',
+              },
+              {
+                title: 'Cardiac Cycle',
+                heading: 'SYSTOLE & DIASTOLE',
+                body: 'The cardiac cycle comprises two phases: systole (contraction) and diastole (relaxation). During systole, ventricular pressure rises above aortic pressure, opening the aortic valve. During diastole, the ventricles fill with blood from the atria.',
+                bullets: ['Isovolumetric contraction → ejection phase', 'Isovolumetric relaxation → rapid filling', 'Cardiac output = HR × Stroke Volume', 'Normal CO at rest: 4–8 L/min'],
+                note: 'Starling\'s Law: the more the ventricle is filled during diastole, the greater the force of contraction during systole.',
+              },
+              {
+                title: 'ECG Basics',
+                heading: 'P-QRS-T WAVEFORM ANALYSIS',
+                body: 'An electrocardiogram (ECG) records the electrical activity of the heart. The P wave represents atrial depolarisation, the QRS complex represents ventricular depolarisation, and the T wave represents ventricular repolarisation.',
+                bullets: ['P wave: atrial depolarisation (80 ms)', 'QRS complex: ventricular depolarisation (<120 ms)', 'T wave: ventricular repolarisation', 'QT interval: total ventricular electrical activity'],
+                note: 'Normal sinus rhythm: rate 60–100 bpm, P before every QRS, PR interval 120–200 ms, QRS < 120 ms.',
+              },
+              {
+                title: 'Clinical Correlates',
+                heading: 'CARDIAC PATHOLOGY OVERVIEW',
+                body: 'Common cardiac conditions include heart failure (inability to pump sufficient blood), arrhythmias (abnormal heart rhythms), and valvular diseases. Heart failure is classified as systolic (reduced EF < 40%) or diastolic (preserved EF ≥ 50%).',
+                bullets: ['Heart failure: reduced or preserved EF', 'Atrial fibrillation: irregular rhythm, stroke risk', 'Mitral stenosis: rheumatic fever sequela', 'Aortic regurgitation: diastolic murmur'],
+                note: 'USMLE tip: New York Heart Association (NYHA) classifies HF severity I–IV based on functional limitation.',
+              },
+            ]
+
+            const openPdf = (idx) => { setPdfCurrentPage(idx); setPdfPreviewOpen(true) }
+
             return (
+              <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-                {/* ── Slides PDF ── */}
+                {/* ── Slides PDF — collapsible ── */}
                 <div style={{ borderRadius: 12, border: `1px solid ${borderClr}`, overflow: 'hidden', background: cardBg }}>
-                  {/* Header */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${borderClr}` }}>
+                  <button
+                    onClick={() => setSlidesExpanded(v => !v)}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderBottom: slidesExpanded ? `1px solid ${borderClr}` : 'none' }}
+                  >
                     <div style={{ width: 34, height: 34, borderRadius: 8, background: '#FFF0F0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PDF_RED} strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
                     </div>
@@ -1402,46 +1449,52 @@ export default function VideoPlayer({
                     <button onClick={e => { e.stopPropagation(); handleSaveResource('slides') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill={isSlidesSaved ? P : 'none'} stroke={isSlidesSaved ? P : text3} strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
                     </button>
-                  </div>
-                  {/* PDF page thumbnail scroll */}
-                  <div style={{ display: 'flex', gap: 10, padding: '12px 14px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                    {DUMMY_SLIDES.map(s => (
-                      <div
-                        key={s.id}
-                        style={{
-                          flexShrink: 0, width: 90, cursor: 'pointer',
-                          borderRadius: 6, overflow: 'hidden',
-                          border: `1px solid ${darkMode ? '#2e2e48' : '#d4d4e8'}`,
-                          boxShadow: '1px 2px 6px rgba(0,0,0,0.10)',
-                          background: darkMode ? '#1a1a2e' : 'white',
-                        }}
-                      >
-                        {/* Page body — mimics a PDF slide page */}
-                        <div style={{ padding: '8px 8px 6px', borderBottom: `2px solid ${PDF_RED}` }}>
-                          <div style={{ fontSize: 8, fontWeight: 800, color: darkMode ? '#aaa' : '#999', marginBottom: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                            Slide {s.id}
-                          </div>
-                          <div style={{ fontSize: 10, fontWeight: 800, color: text1, lineHeight: 1.25, marginBottom: 3 }}>{s.title}</div>
-                          <div style={{ fontSize: 9, color: text3, fontStyle: 'italic', marginBottom: 5 }}>{s.subtitle}</div>
-                          {s.lines.map((l, li) => (
-                            <div key={li} style={{ display: 'flex', alignItems: 'flex-start', gap: 4, marginBottom: 2 }}>
-                              <span style={{ fontSize: 8, color: PDF_RED, fontWeight: 700, marginTop: 1, flexShrink: 0 }}>•</span>
-                              <span style={{ fontSize: 8, color: text2, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l}</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={text3} strokeWidth="2.2" strokeLinecap="round" style={{ flexShrink: 0, transition: 'transform 0.2s', transform: slidesExpanded ? 'rotate(180deg)' : 'rotate(0deg)', marginLeft: 2 }}>
+                      <polyline points="6,9 12,15 18,9"/>
+                    </svg>
+                  </button>
+                  {slidesExpanded && (
+                    <div style={{ display: 'flex', gap: 10, padding: '12px 14px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                      {DUMMY_SLIDES.map((s, idx) => (
+                        <div
+                          key={s.id}
+                          onClick={() => openPdf(idx)}
+                          style={{
+                            flexShrink: 0, width: 90, cursor: 'pointer',
+                            borderRadius: 6, overflow: 'hidden',
+                            border: `1px solid ${darkMode ? '#2e2e48' : '#d4d4e8'}`,
+                            boxShadow: '1px 2px 6px rgba(0,0,0,0.10)',
+                            background: darkMode ? '#1a1a2e' : 'white',
+                          }}
+                        >
+                          <div style={{ padding: '8px 8px 6px', borderBottom: `2px solid ${PDF_RED}` }}>
+                            <div style={{ fontSize: 8, fontWeight: 800, color: darkMode ? '#aaa' : '#999', marginBottom: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                              Slide {s.id}
                             </div>
-                          ))}
+                            <div style={{ fontSize: 10, fontWeight: 800, color: text1, lineHeight: 1.25, marginBottom: 3 }}>{s.title}</div>
+                            <div style={{ fontSize: 9, color: text3, fontStyle: 'italic', marginBottom: 5 }}>{s.subtitle}</div>
+                            {s.lines.map((l, li) => (
+                              <div key={li} style={{ display: 'flex', alignItems: 'flex-start', gap: 4, marginBottom: 2 }}>
+                                <span style={{ fontSize: 8, color: PDF_RED, fontWeight: 700, marginTop: 1, flexShrink: 0 }}>•</span>
+                                <span style={{ fontSize: 8, color: text2, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ padding: '3px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: 7, color: text3 }}>NPrep</span>
+                            <span style={{ fontSize: 7, color: text3 }}>{s.id}/24</span>
+                          </div>
                         </div>
-                        {/* Page footer */}
-                        <div style={{ padding: '3px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: 7, color: text3 }}>NPrep</span>
-                          <span style={{ fontSize: 7, color: text3 }}>{s.id}/24</span>
-                        </div>
+                      ))}
+                      <div
+                        onClick={() => openPdf(0)}
+                        style={{ flexShrink: 0, width: 72, borderRadius: 6, border: `1.5px dashed ${borderClr}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer' }}
+                      >
+                        <span style={{ fontSize: 16, color: text3, lineHeight: 1 }}>+</span>
+                        <span style={{ fontSize: 9, color: text3, textAlign: 'center', lineHeight: 1.3 }}>19 more</span>
                       </div>
-                    ))}
-                    <div style={{ flexShrink: 0, width: 72, borderRadius: 6, border: `1.5px dashed ${borderClr}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer' }}>
-                      <span style={{ fontSize: 16, color: text3, lineHeight: 1 }}>+</span>
-                      <span style={{ fontSize: 9, color: text3, textAlign: 'center', lineHeight: 1.3 }}>19 more</span>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* ── Notes PDF — collapsible ── */}
@@ -1468,14 +1521,11 @@ export default function VideoPlayer({
                   </button>
                   {notesExpanded && (
                     <div style={{ borderTop: `1px solid ${borderClr}` }}>
-                      {/* PDF page preview strip */}
                       {DUMMY_NOTES.map((note, ni) => (
                         <div key={ni} style={{ display: 'flex', gap: 0, borderBottom: ni < DUMMY_NOTES.length - 1 ? `1px solid ${borderClr}` : 'none' }}>
-                          {/* Page number gutter */}
                           <div style={{ width: 30, flexShrink: 0, background: darkMode ? '#16162a' : '#f9f9fe', borderRight: `1px solid ${borderClr}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 12 }}>
                             <span style={{ fontSize: 9, color: text3, fontWeight: 600 }}>p{ni + 1}</span>
                           </div>
-                          {/* Content */}
                           <div style={{ flex: 1, padding: '10px 12px' }}>
                             <p style={{ fontSize: 12, color: text2, lineHeight: 1.7, margin: 0 }}>{note}</p>
                           </div>
@@ -1486,6 +1536,97 @@ export default function VideoPlayer({
                 </div>
 
               </div>
+
+              {/* ── PDF Preview Modal ── */}
+              {pdfPreviewOpen && (() => {
+                const page = PDF_PAGES[pdfCurrentPage]
+                const total = PDF_PAGES.length
+                return (
+                  <div style={{
+                    position: 'absolute', inset: 0, zIndex: 500,
+                    background: '#3a3a3a',
+                    display: 'flex', flexDirection: 'column',
+                  }}>
+                    {/* Modal header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#2a2a2a', flexShrink: 0 }}>
+                      <button onClick={() => setPdfPreviewOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.8)', display: 'flex', padding: 4 }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg>
+                      </button>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>PDF Preview</span>
+                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.08)', padding: '3px 10px', borderRadius: 50 }}>
+                        {pdfCurrentPage + 1} / {total}
+                      </span>
+                    </div>
+
+                    {/* Page content */}
+                    <div className="scroll" style={{ flex: 1, overflowY: 'auto', padding: '16px 14px' }}>
+                      <div style={{
+                        background: 'white', borderRadius: 4,
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                        overflow: 'hidden', minHeight: 480,
+                      }}>
+                        {/* PDF page header band */}
+                        <div style={{ background: '#1a1a2e', padding: '14px 18px 12px' }}>
+                          <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>NPrep · Heart Anatomy Overview</div>
+                          <div style={{ fontSize: 16, fontWeight: 800, color: 'white', lineHeight: 1.35 }}>{page.title}</div>
+                        </div>
+                        {/* Page body */}
+                        <div style={{ padding: '18px 18px 24px' }}>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: PDF_RED, letterSpacing: '0.1em', marginBottom: 10 }}>{page.heading}</div>
+                          <p style={{ fontSize: 13, color: '#333', lineHeight: 1.75, margin: '0 0 16px' }}>{page.body}</p>
+                          {/* Bullet list block */}
+                          <div style={{ borderLeft: `3px solid ${PDF_RED}`, paddingLeft: 14, marginBottom: 16 }}>
+                            {page.bullets.map((b, bi) => (
+                              <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+                                <svg width="10" height="10" viewBox="0 0 10 10" style={{ flexShrink: 0, marginTop: 4 }}>
+                                  <polygon points="0,0 10,5 0,10" fill={PDF_RED}/>
+                                </svg>
+                                <span style={{ fontSize: 12, color: '#222', lineHeight: 1.6 }}>{b}</span>
+                              </div>
+                            ))}
+                          </div>
+                          {/* Note callout */}
+                          <div style={{ background: '#FFF8E1', border: '1px solid #FFD54F', borderRadius: 8, padding: '10px 14px' }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: '#F57F17', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Study Note</div>
+                            <p style={{ fontSize: 12, color: '#5D4037', lineHeight: 1.65, margin: 0 }}>{page.note}</p>
+                          </div>
+                        </div>
+                        {/* Page footer */}
+                        <div style={{ padding: '8px 18px', background: '#f5f5f5', borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 10, color: '#999' }}>NPrep Nursing · Heart Anatomy Overview</span>
+                          <span style={{ fontSize: 10, color: '#999' }}>{pdfCurrentPage + 1}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Navigation bar */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', background: '#2a2a2a', flexShrink: 0 }}>
+                      <button
+                        onClick={() => setPdfCurrentPage(p => Math.max(0, p - 1))}
+                        disabled={pdfCurrentPage === 0}
+                        style={{ width: 40, height: 40, borderRadius: '50%', background: pdfCurrentPage === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.12)', border: 'none', cursor: pdfCurrentPage === 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: pdfCurrentPage === 0 ? 'rgba(255,255,255,0.2)' : 'white' }}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg>
+                      </button>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {PDF_PAGES.map((_, pi) => (
+                          <button key={pi} onClick={() => setPdfCurrentPage(pi)}
+                            style={{ width: pi === pdfCurrentPage ? 20 : 6, height: 6, borderRadius: 3, background: pi === pdfCurrentPage ? PDF_RED : 'rgba(255,255,255,0.25)', border: 'none', cursor: 'pointer', transition: 'width 0.2s', padding: 0 }}
+                          />
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setPdfCurrentPage(p => Math.min(total - 1, p + 1))}
+                        disabled={pdfCurrentPage === total - 1}
+                        style={{ width: 40, height: 40, borderRadius: '50%', background: pdfCurrentPage === total - 1 ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.12)', border: 'none', cursor: pdfCurrentPage === total - 1 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: pdfCurrentPage === total - 1 ? 'rgba(255,255,255,0.2)' : 'white' }}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="9,18 15,12 9,6"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
+              </>
             )
           })()}
 
