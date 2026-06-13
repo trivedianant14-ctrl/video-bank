@@ -943,8 +943,18 @@ export default function VideoPlayer({
             pointerEvents: ctrlsVisible ? 'auto' : 'none',
           }}>
             <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>{currentTime}</span>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>12:00</span>
+              <button
+                onClick={e => { e.stopPropagation(); setShowDownloadQualitySheet(true) }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.65)', display: 'flex', padding: 2 }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                  <polyline points="7,10 12,15 17,10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </button>
               <button
                 onClick={e => { e.stopPropagation(); setIsFullscreen(f => !f); setShowControls(true) }}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.65)', display: 'flex' }}
@@ -1163,60 +1173,31 @@ export default function VideoPlayer({
       {/* SCROLLABLE CONTENT */}
       <div className="scroll" style={{ flex: 1, overflowY: 'auto', background: bg, display: isFullscreen ? 'none' : undefined }}>
 
-        {/* Title + meta */}
-        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${borderClr}` }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: text1, lineHeight: 1.35, marginBottom: 3 }}>{title}</div>
-          <div style={{ fontSize: 11, color: text3 }}>Uploaded on: {uploadDate}</div>
+        {/* Title + meta + Save/Share */}
+        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${borderClr}`, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: text1, lineHeight: 1.35, marginBottom: 3 }}>{title}</div>
+            <div style={{ fontSize: 11, color: text3 }}>Uploaded on: {uploadDate}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 2, alignItems: 'center', flexShrink: 0, paddingTop: 2 }}>
+            <button onClick={handleSaveVideo}
+              style={{ width: 36, height: 36, borderRadius: '50%', background: isSaved ? PL : 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill={isSaved ? P : 'none'} stroke={isSaved ? P : text2} strokeWidth="1.8" strokeLinecap="round">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
+              </svg>
+            </button>
+            <button onClick={() => {}}
+              style={{ width: 36, height: 36, borderRadius: '50%', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={text2} strokeWidth="1.8" strokeLinecap="round">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
-        {/* ── Action row OR Teacher Question (mutually exclusive) ── */}
-        {!teacherQActive ? (
-
-          /* Normal action buttons — shown outside teacher question window (before 6:30 and after 9:15) */
-          <div style={{ padding: '12px 0', borderBottom: `1px solid ${borderClr}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-              {[
-                {
-                  id: 'like', label: 'Like', active: liked, activeColor: P, inactiveColor: text1,
-                  icon: (a, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? P : 'none'} stroke={c} strokeWidth="1.8" strokeLinecap="round"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>,
-                  onClick: handleLike,
-                },
-                {
-                  id: 'dislike', label: 'Dislike', active: disliked, activeColor: '#791F1F', inactiveColor: text1,
-                  icon: (a, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? '#791F1F' : 'none'} stroke={a ? '#791F1F' : c} strokeWidth="1.8" strokeLinecap="round"><path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z"/><path d="M17 2h2.67A2.31 2.31 0 0122 4v7a2.31 2.31 0 01-2.33 2H17"/></svg>,
-                  onClick: handleDislike,
-                },
-                {
-                  id: 'save', label: isSaved ? 'Saved' : 'Save', active: isSaved, activeColor: P, inactiveColor: text1,
-                  icon: (a, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? P : 'none'} stroke={a ? P : c} strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>,
-                  onClick: handleSaveVideo,
-                },
-                {
-                  id: 'download', label: 'Download', active: false, activeColor: text2, inactiveColor: text1,
-                  icon: (_, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
-                  onClick: () => setShowDownloadQualitySheet(true),
-                },
-                {
-                  id: 'share', label: 'Share', active: false, activeColor: text2, inactiveColor: text1,
-                  icon: (_, c) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
-                  onClick: () => {},
-                },
-              ].map(a => {
-                const iconColor = a.active ? a.activeColor : a.inactiveColor
-                return (
-                  <button
-                    key={a.id} onClick={a.onClick}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 10px' }}
-                  >
-                    {a.icon(a.active, iconColor)}
-                    <span style={{ fontSize: 10, color: a.active ? a.activeColor : text2 }}>{a.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-        ) : (
+        {/* Teacher Question — shown when video reaches 6:30 */}
+        {teacherQActive && (
 
           /* Teacher's Question card — shown once video reaches 6:30 */
           <div style={{ padding: '14px 16px', borderBottom: `1px solid ${borderClr}`, background: darkMode ? '#16162a' : '#FAFAFF' }}>

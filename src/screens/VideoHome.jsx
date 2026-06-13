@@ -377,52 +377,78 @@ export default function VideoHome({
             })}
           </div>
 
-          {/* Subject rows */}
-          {filteredSubjects.length > 0 ? (
-            <div style={{ background: 'white', borderRadius: 16, overflow: 'hidden',
-              border: `1px solid ${BD}`, boxShadow: '0 2px 8px rgba(83,74,183,0.05)' }}>
-              {filteredSubjects.map((subject, i) => {
-                const { completed, total } = getStats(subject)
-                const pct = total > 0 ? completed / total : 0
-                const isLast = i === filteredSubjects.length - 1
-                return (
-                  <button key={subject.id} onClick={() => goToSubject(subject)}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 13,
-                      padding: '14px 16px', background: 'white', border: 'none',
-                      borderBottom: isLast ? 'none' : `1px solid ${BD}`,
-                      cursor: 'pointer', textAlign: 'left' }}>
-                    <div style={{ width: 46, height: 46, borderRadius: 13, background: subject.bg,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                      border: `1.5px solid ${subject.color}28` }}>
-                      <span style={{ fontSize: 20, fontWeight: 900, color: subject.color, lineHeight: 1 }}>
-                        {subject.name.charAt(0)}
-                      </span>
+          {/* Subject rows + Also on NPrep — single card */}
+          <div style={{ background: 'white', borderRadius: 16, overflow: 'hidden',
+            border: `1px solid ${BD}`, boxShadow: '0 2px 8px rgba(83,74,183,0.05)' }}>
+
+            {filteredSubjects.length > 0 ? filteredSubjects.map((subject, i) => {
+              const { completed, total } = getStats(subject)
+              const pct = total > 0 ? completed / total : 0
+              return (
+                <button key={subject.id} onClick={() => goToSubject(subject)}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 13,
+                    padding: '14px 16px', background: 'white', border: 'none',
+                    borderBottom: `1px solid ${BD}`,
+                    cursor: 'pointer', textAlign: 'left' }}>
+                  <div style={{ width: 46, height: 46, borderRadius: 13, background: subject.bg,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    border: `1.5px solid ${subject.color}28` }}>
+                    <span style={{ fontSize: 20, fontWeight: 900, color: subject.color, lineHeight: 1 }}>
+                      {subject.name.charAt(0)}
+                    </span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T1, marginBottom: 3 }}>{subject.name}</div>
+                    <div style={{ fontSize: 11, color: T3, marginBottom: 6 }}>
+                      {completed}/{total} watched
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: T1, marginBottom: 3 }}>{subject.name}</div>
-                      <div style={{ fontSize: 11, color: T3, marginBottom: 6 }}>
-                        Dr. Amit Verma · {completed}/{total} watched
-                      </div>
-                      <div style={{ height: 2.5, background: BD, borderRadius: 2, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pct * 100}%`, background: subject.color,
-                          borderRadius: 2, transition: 'width 0.3s' }}/>
-                      </div>
+                    <div style={{ height: 2.5, background: BD, borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct * 100}%`, background: subject.color,
+                        borderRadius: 2, transition: 'width 0.3s' }}/>
                     </div>
-                    <IconChevron/>
-                  </button>
-                )
-              })}
-            </div>
-          ) : (
-            <div style={{ background: 'white', borderRadius: 16, padding: '28px 16px', textAlign: 'center',
-              border: `1px solid ${BD}` }}>
-              <div style={{ fontSize: 28, marginBottom: 10 }}>📖</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: T2, marginBottom: 4 }}>Coming soon</div>
-              <div style={{ fontSize: 12, color: T3, lineHeight: 1.6 }}>
-                {yearFilter === '3' ? '3rd year' : '4th year'} subjects are being added. Check back soon!
+                  </div>
+                  <IconChevron/>
+                </button>
+              )
+            }) : (
+              <div style={{ padding: '20px 16px 6px', borderBottom: `1px solid ${BD}` }}>
+                <div style={{ textAlign: 'center', padding: '8px 0 12px' }}>
+                  <div style={{ fontSize: 24, marginBottom: 8 }}>📖</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T2, marginBottom: 3 }}>Coming soon</div>
+                  <div style={{ fontSize: 11, color: T3, lineHeight: 1.6 }}>
+                    {yearFilter === '3' ? '3rd year' : '4th year'} subjects are being added.
+                  </div>
+                </div>
               </div>
+            )}
+
+            {/* ── Also on NPrep ── subtle divider + rows */}
+            <div style={{ padding: '8px 16px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+                Also on NPrep
+              </span>
+              <div style={{ flex: 1, height: 1, background: BD }} />
             </div>
-          )}
+
+            {EXTRA_RESOURCES.map((item, i) => (
+              <button key={item.id}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 13,
+                  padding: '11px 16px', background: 'white', border: 'none',
+                  borderTop: `1px solid ${BD}`,
+                  cursor: 'pointer', textAlign: 'left' }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: item.bg,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 17 }}>{item.icon}</span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T2 }}>{item.title}</div>
+                  <div style={{ fontSize: 11, color: T3, marginTop: 1 }}>{item.subtitle}</div>
+                </div>
+                <IconChevron/>
+              </button>
+            ))}
+
+          </div>
 
         </div>
 
