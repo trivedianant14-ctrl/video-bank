@@ -365,8 +365,8 @@ export default function VideoHome({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{ display: 'flex', gap: 0, background: BD, borderRadius: 50, padding: 3 }}>
               {[
-                { id: 'subjects',  label: 'Subjects' },
-                { id: 'nprep',     label: 'Also on NPrep' },
+                { id: 'subjects',  label: 'Nursing' },
+                { id: 'nprep',     label: 'Non-Nursing' },
               ].map(tab => (
                 <button key={tab.id} onClick={() => setSectionTab(tab.id)}
                   style={{
