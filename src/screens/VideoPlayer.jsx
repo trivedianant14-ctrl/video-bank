@@ -1396,12 +1396,13 @@ export default function VideoPlayer({
           )}
 
           {activeTab === 'resources' && videoId !== 'v02' && (() => {
+            const PDF_RED = '#E53935'
             const DUMMY_SLIDES = [
-              { id: 1, accent: '#534AB7', title: 'Heart Anatomy', lines: ['4-chamber structure', 'Valves & septa'] },
-              { id: 2, accent: '#1B7F4F', title: 'Conduction System', lines: ['SA → AV pathway', 'Purkinje network'] },
-              { id: 3, accent: '#C05C0D', title: 'Cardiac Cycle', lines: ['Systole & diastole', 'Pressure-volume loop'] },
-              { id: 4, accent: '#1565C0', title: 'ECG Basics', lines: ['P-QRS-T waves', 'Normal intervals'] },
-              { id: 5, accent: '#6B21A8', title: 'Clinical Correlates', lines: ['Heart failure signs', 'Arrhythmia types'] },
+              { id: 1, title: 'Heart Anatomy', subtitle: 'Overview', lines: ['4-chamber structure', 'Valves & septa', 'Coronary supply'] },
+              { id: 2, title: 'Conduction', subtitle: 'System', lines: ['SA → AV node', 'Purkinje network', 'HV interval norms'] },
+              { id: 3, title: 'Cardiac Cycle', subtitle: 'Phases', lines: ['Systole & diastole', 'P-V loop', 'Starling\'s law'] },
+              { id: 4, title: 'ECG Basics', subtitle: 'Waveforms', lines: ['P-QRS-T waves', 'Normal intervals', 'Axis deviation'] },
+              { id: 5, title: 'Clinical', subtitle: 'Correlates', lines: ['Heart failure', 'Arrhythmias', 'Murmurs'] },
             ]
             const DUMMY_NOTES = [
               'The heart has four chambers: two atria (upper) and two ventricles (lower). The right side pumps deoxygenated blood to the lungs; the left side pumps oxygenated blood to the body.',
@@ -1409,58 +1410,85 @@ export default function VideoPlayer({
               'Key valves: Tricuspid (RA→RV), Pulmonary (RV→pulmonary artery), Mitral (LA→LV), Aortic (LV→aorta). "Try Pulling My Aorta" — classic mnemonic.',
               'Cardiac output = Heart Rate × Stroke Volume. Normal CO ≈ 4–8 L/min at rest.',
             ]
+            /* PDF badge — small red pill */
+            const PdfBadge = () => (
+              <span style={{ fontSize: 8, fontWeight: 800, color: 'white', background: PDF_RED, padding: '1px 5px', borderRadius: 3, letterSpacing: '0.04em' }}>PDF</span>
+            )
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-                {/* ── Slides — always open with thumbnail preview ── */}
+                {/* ── Slides PDF ── */}
                 <div style={{ borderRadius: 12, border: `1px solid ${borderClr}`, overflow: 'hidden', background: cardBg }}>
                   {/* Header */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${borderClr}` }}>
-                    <div style={{ color: P }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: '#FFF0F0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PDF_RED} strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: text1 }}>Slides</div>
-                      <div style={{ fontSize: 11, color: text3, marginTop: 1 }}>24 frames · auto-captured</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: text1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        Slides <PdfBadge />
+                      </div>
+                      <div style={{ fontSize: 11, color: text3, marginTop: 1 }}>24 pages · Heart Anatomy Overview</div>
                     </div>
                     <button onClick={e => { e.stopPropagation(); handleSaveResource('slides') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill={isSlidesSaved ? P : 'none'} stroke={isSlidesSaved ? P : text3} strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
                     </button>
                   </div>
-                  {/* Thumbnail scroll */}
+                  {/* PDF page thumbnail scroll */}
                   <div style={{ display: 'flex', gap: 10, padding: '12px 14px', overflowX: 'auto', scrollbarWidth: 'none' }}>
                     {DUMMY_SLIDES.map(s => (
-                      <div key={s.id} style={{ flexShrink: 0, width: 110, borderRadius: 8, overflow: 'hidden', border: `1px solid ${borderClr}`, cursor: 'pointer' }}>
-                        <div style={{ height: 52, background: `linear-gradient(135deg, ${s.accent}dd 0%, ${s.accent}88 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: 10, fontWeight: 800, color: 'white', textAlign: 'center', padding: '0 6px', lineHeight: 1.3 }}>{s.title}</span>
-                        </div>
-                        <div style={{ padding: '6px 8px', background: darkMode ? '#1e1e30' : 'white' }}>
+                      <div
+                        key={s.id}
+                        style={{
+                          flexShrink: 0, width: 90, cursor: 'pointer',
+                          borderRadius: 6, overflow: 'hidden',
+                          border: `1px solid ${darkMode ? '#2e2e48' : '#d4d4e8'}`,
+                          boxShadow: '1px 2px 6px rgba(0,0,0,0.10)',
+                          background: darkMode ? '#1a1a2e' : 'white',
+                        }}
+                      >
+                        {/* Page body — mimics a PDF slide page */}
+                        <div style={{ padding: '8px 8px 6px', borderBottom: `2px solid ${PDF_RED}` }}>
+                          <div style={{ fontSize: 8, fontWeight: 800, color: darkMode ? '#aaa' : '#999', marginBottom: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                            Slide {s.id}
+                          </div>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: text1, lineHeight: 1.25, marginBottom: 3 }}>{s.title}</div>
+                          <div style={{ fontSize: 9, color: text3, fontStyle: 'italic', marginBottom: 5 }}>{s.subtitle}</div>
                           {s.lines.map((l, li) => (
-                            <div key={li} style={{ fontSize: 9, color: text3, lineHeight: 1.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l}</div>
+                            <div key={li} style={{ display: 'flex', alignItems: 'flex-start', gap: 4, marginBottom: 2 }}>
+                              <span style={{ fontSize: 8, color: PDF_RED, fontWeight: 700, marginTop: 1, flexShrink: 0 }}>•</span>
+                              <span style={{ fontSize: 8, color: text2, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l}</span>
+                            </div>
                           ))}
+                        </div>
+                        {/* Page footer */}
+                        <div style={{ padding: '3px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 7, color: text3 }}>NPrep</span>
+                          <span style={{ fontSize: 7, color: text3 }}>{s.id}/24</span>
                         </div>
                       </div>
                     ))}
-                    <div style={{ flexShrink: 0, width: 80, borderRadius: 8, border: `1.5px dashed ${borderClr}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer' }}>
-                      <span style={{ fontSize: 18, color: text3 }}>+</span>
+                    <div style={{ flexShrink: 0, width: 72, borderRadius: 6, border: `1.5px dashed ${borderClr}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer' }}>
+                      <span style={{ fontSize: 16, color: text3, lineHeight: 1 }}>+</span>
                       <span style={{ fontSize: 9, color: text3, textAlign: 'center', lineHeight: 1.3 }}>19 more</span>
                     </div>
                   </div>
                 </div>
 
-                {/* ── Notes — collapsible ── */}
+                {/* ── Notes PDF — collapsible ── */}
                 <div style={{ borderRadius: 12, border: `1px solid ${borderClr}`, overflow: 'hidden', background: cardBg }}>
-                  {/* Header / toggle */}
                   <button
                     onClick={() => setNotesExpanded(n => !n)}
                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
                   >
-                    <div style={{ color: P }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: '#FFF0F0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PDF_RED} strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: text1 }}>Notes</div>
-                      <div style={{ fontSize: 11, color: text3, marginTop: 1 }}>PDF · 4 pages · by content team</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: text1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        Notes <PdfBadge />
+                      </div>
+                      <div style={{ fontSize: 11, color: text3, marginTop: 1 }}>4 pages · by content team</div>
                     </div>
                     <button onClick={e => { e.stopPropagation(); handleSaveResource('notes') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill={isNotesSaved ? P : 'none'} stroke={isNotesSaved ? P : text3} strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
@@ -1469,15 +1497,19 @@ export default function VideoPlayer({
                       <polyline points="6,9 12,15 18,9"/>
                     </svg>
                   </button>
-                  {/* Expanded content */}
                   {notesExpanded && (
-                    <div style={{ padding: '0 14px 14px', borderTop: `1px solid ${borderClr}` }}>
+                    <div style={{ borderTop: `1px solid ${borderClr}` }}>
+                      {/* PDF page preview strip */}
                       {DUMMY_NOTES.map((note, ni) => (
-                        <div key={ni} style={{ display: 'flex', gap: 10, padding: '10px 0', borderBottom: ni < DUMMY_NOTES.length - 1 ? `1px dashed ${borderClr}` : 'none' }}>
-                          <div style={{ width: 18, height: 18, borderRadius: '50%', background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
-                            <span style={{ fontSize: 9, fontWeight: 700, color: P }}>{ni + 1}</span>
+                        <div key={ni} style={{ display: 'flex', gap: 0, borderBottom: ni < DUMMY_NOTES.length - 1 ? `1px solid ${borderClr}` : 'none' }}>
+                          {/* Page number gutter */}
+                          <div style={{ width: 30, flexShrink: 0, background: darkMode ? '#16162a' : '#f9f9fe', borderRight: `1px solid ${borderClr}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 12 }}>
+                            <span style={{ fontSize: 9, color: text3, fontWeight: 600 }}>p{ni + 1}</span>
                           </div>
-                          <p style={{ fontSize: 12, color: text2, lineHeight: 1.65, margin: 0 }}>{note}</p>
+                          {/* Content */}
+                          <div style={{ flex: 1, padding: '10px 12px' }}>
+                            <p style={{ fontSize: 12, color: text2, lineHeight: 1.7, margin: 0 }}>{note}</p>
+                          </div>
                         </div>
                       ))}
                     </div>
