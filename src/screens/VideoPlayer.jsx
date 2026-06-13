@@ -1453,48 +1453,54 @@ export default function VideoPlayer({
                       <polyline points="6,9 12,15 18,9"/>
                     </svg>
                   </button>
-                  {slidesExpanded && (
-                    <div style={{ display: 'flex', gap: 10, padding: '12px 14px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                      {DUMMY_SLIDES.map((s, idx) => (
+                  {slidesExpanded && (() => {
+                    const s = DUMMY_SLIDES[0]
+                    return (
+                      <div style={{ padding: '14px 16px 16px' }}>
+                        {/* Single enlarged slide preview */}
                         <div
-                          key={s.id}
-                          onClick={() => openPdf(idx)}
+                          onClick={() => openPdf(0)}
                           style={{
-                            flexShrink: 0, width: 90, cursor: 'pointer',
-                            borderRadius: 6, overflow: 'hidden',
-                            border: `1px solid ${darkMode ? '#2e2e48' : '#d4d4e8'}`,
-                            boxShadow: '1px 2px 6px rgba(0,0,0,0.10)',
+                            cursor: 'pointer', borderRadius: 10, overflow: 'hidden',
+                            border: `1px solid ${darkMode ? '#2e2e48' : '#c8c8e0'}`,
+                            boxShadow: '0 3px 12px rgba(0,0,0,0.12)',
                             background: darkMode ? '#1a1a2e' : 'white',
                           }}
                         >
-                          <div style={{ padding: '8px 8px 6px', borderBottom: `2px solid ${PDF_RED}` }}>
-                            <div style={{ fontSize: 8, fontWeight: 800, color: darkMode ? '#aaa' : '#999', marginBottom: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                              Slide {s.id}
+                          {/* Slide body */}
+                          <div style={{ padding: '14px 16px 12px', borderBottom: `3px solid ${PDF_RED}` }}>
+                            <div style={{ fontSize: 9, fontWeight: 800, color: darkMode ? '#aaa' : '#999', marginBottom: 6, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+                              Slide {s.id} of 24
                             </div>
-                            <div style={{ fontSize: 10, fontWeight: 800, color: text1, lineHeight: 1.25, marginBottom: 3 }}>{s.title}</div>
-                            <div style={{ fontSize: 9, color: text3, fontStyle: 'italic', marginBottom: 5 }}>{s.subtitle}</div>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: text1, lineHeight: 1.3, marginBottom: 4 }}>{s.title}</div>
+                            <div style={{ fontSize: 12, color: text3, fontStyle: 'italic', marginBottom: 10 }}>{s.subtitle}</div>
                             {s.lines.map((l, li) => (
-                              <div key={li} style={{ display: 'flex', alignItems: 'flex-start', gap: 4, marginBottom: 2 }}>
-                                <span style={{ fontSize: 8, color: PDF_RED, fontWeight: 700, marginTop: 1, flexShrink: 0 }}>•</span>
-                                <span style={{ fontSize: 8, color: text2, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l}</span>
+                              <div key={li} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 5 }}>
+                                <span style={{ fontSize: 10, color: PDF_RED, fontWeight: 700, marginTop: 1, flexShrink: 0 }}>•</span>
+                                <span style={{ fontSize: 12, color: text2, lineHeight: 1.5 }}>{l}</span>
                               </div>
                             ))}
                           </div>
-                          <div style={{ padding: '3px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: 7, color: text3 }}>NPrep</span>
-                            <span style={{ fontSize: 7, color: text3 }}>{s.id}/24</span>
+                          {/* Slide footer */}
+                          <div style={{ padding: '6px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: 10, color: text3 }}>NPrep</span>
+                            <span style={{ fontSize: 10, color: text3 }}>1 / 24</span>
                           </div>
                         </div>
-                      ))}
-                      <div
-                        onClick={() => openPdf(0)}
-                        style={{ flexShrink: 0, width: 72, borderRadius: 6, border: `1.5px dashed ${borderClr}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer' }}
-                      >
-                        <span style={{ fontSize: 16, color: text3, lineHeight: 1 }}>+</span>
-                        <span style={{ fontSize: 9, color: text3, textAlign: 'center', lineHeight: 1.3 }}>19 more</span>
+
+                        {/* Tap hint */}
+                        <div
+                          onClick={() => openPdf(0)}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10, cursor: 'pointer' }}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PDF_RED} strokeWidth="2.2" strokeLinecap="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                          </svg>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: PDF_RED }}>Tap to preview all 24 slides</span>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
                 </div>
 
                 {/* ── Notes PDF — collapsible ── */}
