@@ -1086,7 +1086,7 @@ export default function VideoPlayer({
           </div>
         )}
 
-        {/* Landscape ABCD overlay — tappable blocks directly on the video */}
+        {/* Landscape ABCD overlay — stacked vertically on the right side */}
         {isFullscreen && teacherQActive && (
           <div
             onClick={e => e.stopPropagation()}
@@ -1095,13 +1095,9 @@ export default function VideoPlayer({
               background: 'rgba(10,10,28,0.88)',
               border: '1px solid rgba(255,255,255,0.15)',
               borderRadius: 12, padding: '8px 10px',
-              minWidth: 140,
             }}
           >
-            <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.55)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Dr. Amit's Question
-            </div>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {TEACHER_QUESTION.options.map((opt, i) => {
                 const selected = teacherQAnswer === i
                 const isCorrect = i === TEACHER_QUESTION.correct
@@ -1114,7 +1110,7 @@ export default function VideoPlayer({
                   <button key={i}
                     onClick={() => { if (teacherQAnswer === null) setTeacherQAnswer(i) }}
                     style={{
-                      width: 32, height: 32, borderRadius: 8,
+                      width: 36, height: 30, borderRadius: 8,
                       background: bg, border: `1.5px solid ${border}`, color: color,
                       fontSize: 13, fontWeight: 800,
                       cursor: teacherQAnswer === null ? 'pointer' : 'default',
@@ -1127,8 +1123,8 @@ export default function VideoPlayer({
               })}
             </div>
             {teacherQAnswer !== null && (
-              <div style={{ fontSize: 9, color: teacherQAnswer === TEACHER_QUESTION.correct ? '#7FD654' : '#F09595', marginTop: 5, fontWeight: 600 }}>
-                {teacherQAnswer === TEACHER_QUESTION.correct ? '✓ Correct!' : `✗ Ans: ${['A','B','C','D'][TEACHER_QUESTION.correct]}`}
+              <div style={{ fontSize: 9, color: teacherQAnswer === TEACHER_QUESTION.correct ? '#7FD654' : '#F09595', marginTop: 5, fontWeight: 600, textAlign: 'center' }}>
+                {teacherQAnswer === TEACHER_QUESTION.correct ? '✓ Correct!' : `✗ ${['A','B','C','D'][TEACHER_QUESTION.correct]}`}
               </div>
             )}
           </div>
@@ -1223,35 +1219,8 @@ export default function VideoPlayer({
         {/* Teacher Question — shown when video reaches 6:30 */}
         {teacherQActive && (
 
-          /* Teacher's Question card — shown once video reaches 6:30 */
+          /* Teacher's Question card — ABCD blocks only */
           <div style={{ padding: '14px 16px', borderBottom: `1px solid ${borderClr}`, background: darkMode ? '#16162a' : '#FAFAFF' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
-              <div style={{ width: 30, height: 30, borderRadius: '50%', background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.2" strokeLinecap="round">
-                  <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                </svg>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: P, lineHeight: 1 }}>Dr. Amit's Question</div>
-                <div style={{ fontSize: 10, color: text3, marginTop: 2 }}>
-                  Pause and attempt · asked at {TEACHER_QUESTION.askedAt}
-                </div>
-              </div>
-              {teacherQAnswer !== null && (
-                <span style={{
-                  fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 50,
-                  background: teacherQAnswer === TEACHER_QUESTION.correct ? GREENBG : '#FCEBEB',
-                  color: teacherQAnswer === TEACHER_QUESTION.correct ? GREEN : '#791F1F',
-                }}>
-                  {teacherQAnswer === TEACHER_QUESTION.correct ? '✓ Correct' : '✗ Try again'}
-                </span>
-              )}
-            </div>
-
-            <div style={{ fontSize: 13, fontWeight: 600, color: text1, lineHeight: 1.55, marginBottom: 10 }}>
-              {TEACHER_QUESTION.text}
-            </div>
-
             {/* ABCD square blocks row */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
               {TEACHER_QUESTION.options.map((opt, i) => {
