@@ -234,6 +234,7 @@ export default function VideoPlayer({
 
   const [autoplay, setAutoplay] = useState(true)
   const [videoEndedNoAutoplay, setVideoEndedNoAutoplay] = useState(false)
+  const [notesExpanded, setNotesExpanded] = useState(false)
 
   const bg = darkMode ? '#0d0d1a' : 'white'
   const cardBg = darkMode ? '#1e1e30' : BG2
@@ -1085,28 +1086,51 @@ export default function VideoPlayer({
           </div>
         )}
 
-        {/* Landscape nudge — tap to exit fullscreen and attempt question */}
+        {/* Landscape ABCD overlay — tappable blocks directly on the video */}
         {isFullscreen && teacherQActive && (
           <div
-            onClick={e => { e.stopPropagation(); setIsFullscreen(false) }}
+            onClick={e => e.stopPropagation()}
             style={{
-              position: 'absolute', top: 56, right: 12, zIndex: 15,
-              background: 'rgba(12,12,32,0.84)',
-              border: '1px solid rgba(255,255,255,0.18)',
-              borderRadius: 10, padding: '7px 11px 7px 9px',
-              display: 'flex', alignItems: 'center', gap: 8,
-              cursor: 'pointer',
+              position: 'absolute', top: 48, right: 12, zIndex: 15,
+              background: 'rgba(10,10,28,0.88)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: 12, padding: '8px 10px',
+              minWidth: 140,
             }}
           >
-            <div style={{ width: 24, height: 24, borderRadius: '50%', background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.5" strokeLinecap="round">
-                <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
-              </svg>
+            <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.55)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Dr. Amit's Question
             </div>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'white', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Dr. Amit's Question</div>
-              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', marginTop: 1, whiteSpace: 'nowrap' }}>Tap to attempt ↙</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {TEACHER_QUESTION.options.map((opt, i) => {
+                const selected = teacherQAnswer === i
+                const isCorrect = i === TEACHER_QUESTION.correct
+                let bg = 'rgba(255,255,255,0.08)', border = 'rgba(255,255,255,0.2)', color = 'rgba(255,255,255,0.85)'
+                if (teacherQAnswer !== null) {
+                  if (isCorrect) { bg = 'rgba(80,180,80,0.35)'; border = '#97C459'; color = '#7FD654' }
+                  else if (selected) { bg = 'rgba(200,60,60,0.35)'; border = '#F09595'; color = '#F09595' }
+                }
+                return (
+                  <button key={i}
+                    onClick={() => { if (teacherQAnswer === null) setTeacherQAnswer(i) }}
+                    style={{
+                      width: 32, height: 32, borderRadius: 8,
+                      background: bg, border: `1.5px solid ${border}`, color: color,
+                      fontSize: 13, fontWeight: 800,
+                      cursor: teacherQAnswer === null ? 'pointer' : 'default',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    {['A', 'B', 'C', 'D'][i]}
+                  </button>
+                )
+              })}
             </div>
+            {teacherQAnswer !== null && (
+              <div style={{ fontSize: 9, color: teacherQAnswer === TEACHER_QUESTION.correct ? '#7FD654' : '#F09595', marginTop: 5, fontWeight: 600 }}>
+                {teacherQAnswer === TEACHER_QUESTION.correct ? '✓ Correct!' : `✗ Ans: ${['A','B','C','D'][TEACHER_QUESTION.correct]}`}
+              </div>
+            )}
           </div>
         )}
 
@@ -1228,47 +1252,41 @@ export default function VideoPlayer({
               {TEACHER_QUESTION.text}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {/* ABCD square blocks row */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
               {TEACHER_QUESTION.options.map((opt, i) => {
                 const selected = teacherQAnswer === i
                 const isCorrect = i === TEACHER_QUESTION.correct
-                let oBg = darkMode ? '#1e1e30' : 'white', oBorder = borderClr, oColor = text2
+                let bg = darkMode ? '#1e1e30' : 'white', border = borderClr, color = text2
                 if (teacherQAnswer !== null) {
-                  if (isCorrect) { oBg = '#EAF3DE'; oBorder = '#97C459'; oColor = GREEN }
-                  else if (selected) { oBg = '#FCEBEB'; oBorder = '#F09595'; oColor = '#791F1F' }
-                } else if (selected) { oBg = PL; oBorder = P; oColor = PD }
+                  if (isCorrect) { bg = '#EAF3DE'; border = '#97C459'; color = GREEN }
+                  else if (selected) { bg = '#FCEBEB'; border = '#F09595'; color = '#791F1F' }
+                } else if (selected) { bg = PL; border = P; color = PD }
                 return (
                   <button key={i}
                     onClick={() => { if (teacherQAnswer === null) setTeacherQAnswer(i) }}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px',
-                      borderRadius: 10, border: `1.5px solid ${oBorder}`, background: oBg,
-                      color: oColor, fontSize: 13, textAlign: 'left',
+                      flex: 1, height: 48, borderRadius: 10,
+                      border: `2px solid ${border}`, background: bg, color: color,
+                      fontSize: 16, fontWeight: 800,
                       cursor: teacherQAnswer === null ? 'pointer' : 'default',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >
-                    <span style={{
-                      width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                      fontSize: 10, fontWeight: 700, lineHeight: 1,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      border: `1.5px solid ${oBorder}`,
-                      background: teacherQAnswer !== null && (isCorrect || selected)
-                        ? (isCorrect ? GREEN : '#791F1F') : 'transparent',
-                      color: teacherQAnswer !== null && (isCorrect || selected) ? 'white' : oColor,
-                    }}>
-                      {['A', 'B', 'C', 'D'][i]}
-                    </span>
-                    <span style={{ flex: 1 }}>{opt}</span>
-                    {teacherQAnswer !== null && isCorrect && (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2.5" strokeLinecap="round"><polyline points="20,6 9,17 4,12"/></svg>
-                    )}
-                    {teacherQAnswer !== null && selected && !isCorrect && (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#791F1F" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    )}
+                    {['A', 'B', 'C', 'D'][i]}
                   </button>
                 )
               })}
             </div>
+            {/* Show selected option text after answering */}
+            {teacherQAnswer !== null && (
+              <div style={{ marginBottom: 8, fontSize: 12, color: teacherQAnswer === TEACHER_QUESTION.correct ? GREEN : '#791F1F', fontWeight: 600 }}>
+                {['A', 'B', 'C', 'D'][teacherQAnswer]}. {TEACHER_QUESTION.options[teacherQAnswer]}
+                {teacherQAnswer !== TEACHER_QUESTION.correct && (
+                  <span style={{ color: GREEN, fontWeight: 600 }}> · Correct: {['A', 'B', 'C', 'D'][TEACHER_QUESTION.correct]}. {TEACHER_QUESTION.options[TEACHER_QUESTION.correct]}</span>
+                )}
+              </div>
+            )}
 
             {teacherQAnswer !== null && (
               <div style={{ marginTop: 10, padding: '10px 13px', borderRadius: 10, background: '#EAF3DE', border: '1px solid #97C459' }}>
@@ -1334,12 +1352,12 @@ export default function VideoPlayer({
                 >
                   <span style={{ fontSize: 11, fontWeight: 700, color: P, minWidth: 30, flexShrink: 0 }}>{topic.ts}</span>
                   <div style={{ width: 1, height: 16, background: borderClr, flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, color: text1, flex: 1 }}>{topic.name}</span>
-                  {topic.hasQuestion && (
-                    <span style={{ fontSize: 9, fontWeight: 700, color: P, background: PL, padding: '2px 7px', borderRadius: 50, flexShrink: 0, marginRight: 4 }}>
-                      Q
-                    </span>
-                  )}
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+                    <span style={{ fontSize: 13, color: text1 }}>{topic.name}</span>
+                    {topic.hasQuestion && (
+                      <span style={{ fontSize: 9, fontWeight: 700, color: P, background: PL, padding: '2px 7px', borderRadius: 50, flexShrink: 0 }}>Q</span>
+                    )}
+                  </div>
                   <svg style={{ flexShrink: 0 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={text3} strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
               ))}
@@ -1377,42 +1395,98 @@ export default function VideoPlayer({
             </div>
           )}
 
-          {activeTab === 'resources' && videoId !== 'v02' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[
-                {
-                  type: 'slides', label: 'Slides', subtitle: '24 frames · auto-captured',
-                  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
-                },
-                {
-                  type: 'notes', label: 'Notes', subtitle: 'PDF · by content team',
-                  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>,
-                },
-              ].map(res => {
-                const rSaved = res.type === 'slides' ? isSlidesSaved : isNotesSaved
-                return (
-                  <div
-                    key={res.type} onClick={() => setShowResourceModal(res.type)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, border: `1px solid ${borderClr}`, background: cardBg, cursor: 'pointer' }}
-                  >
-                    <div style={{ color: P }}>{res.icon}</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: text1 }}>{res.label}</div>
-                      <div style={{ fontSize: 11, color: text3, marginTop: 2 }}>{res.subtitle}</div>
+          {activeTab === 'resources' && videoId !== 'v02' && (() => {
+            const DUMMY_SLIDES = [
+              { id: 1, accent: '#534AB7', title: 'Heart Anatomy', lines: ['4-chamber structure', 'Valves & septa'] },
+              { id: 2, accent: '#1B7F4F', title: 'Conduction System', lines: ['SA → AV pathway', 'Purkinje network'] },
+              { id: 3, accent: '#C05C0D', title: 'Cardiac Cycle', lines: ['Systole & diastole', 'Pressure-volume loop'] },
+              { id: 4, accent: '#1565C0', title: 'ECG Basics', lines: ['P-QRS-T waves', 'Normal intervals'] },
+              { id: 5, accent: '#6B21A8', title: 'Clinical Correlates', lines: ['Heart failure signs', 'Arrhythmia types'] },
+            ]
+            const DUMMY_NOTES = [
+              'The heart has four chambers: two atria (upper) and two ventricles (lower). The right side pumps deoxygenated blood to the lungs; the left side pumps oxygenated blood to the body.',
+              'The SA node (sinoatrial node) is the natural pacemaker — it fires at 60–100 bpm and initiates each heartbeat. Impulses travel to the AV node, then down the Bundle of His to the Purkinje fibres.',
+              'Key valves: Tricuspid (RA→RV), Pulmonary (RV→pulmonary artery), Mitral (LA→LV), Aortic (LV→aorta). "Try Pulling My Aorta" — classic mnemonic.',
+              'Cardiac output = Heart Rate × Stroke Volume. Normal CO ≈ 4–8 L/min at rest.',
+            ]
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+                {/* ── Slides — always open with thumbnail preview ── */}
+                <div style={{ borderRadius: 12, border: `1px solid ${borderClr}`, overflow: 'hidden', background: cardBg }}>
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${borderClr}` }}>
+                    <div style={{ color: P }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                     </div>
-                    <button
-                      onClick={e => { e.stopPropagation(); handleSaveResource(res.type) }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill={rSaved ? P : 'none'} stroke={rSaved ? P : text3} strokeWidth="1.8" strokeLinecap="round">
-                        <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
-                      </svg>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: text1 }}>Slides</div>
+                      <div style={{ fontSize: 11, color: text3, marginTop: 1 }}>24 frames · auto-captured</div>
+                    </div>
+                    <button onClick={e => { e.stopPropagation(); handleSaveResource('slides') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill={isSlidesSaved ? P : 'none'} stroke={isSlidesSaved ? P : text3} strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
                     </button>
                   </div>
-                )
-              })}
-            </div>
-          )}
+                  {/* Thumbnail scroll */}
+                  <div style={{ display: 'flex', gap: 10, padding: '12px 14px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                    {DUMMY_SLIDES.map(s => (
+                      <div key={s.id} style={{ flexShrink: 0, width: 110, borderRadius: 8, overflow: 'hidden', border: `1px solid ${borderClr}`, cursor: 'pointer' }}>
+                        <div style={{ height: 52, background: `linear-gradient(135deg, ${s.accent}dd 0%, ${s.accent}88 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: 10, fontWeight: 800, color: 'white', textAlign: 'center', padding: '0 6px', lineHeight: 1.3 }}>{s.title}</span>
+                        </div>
+                        <div style={{ padding: '6px 8px', background: darkMode ? '#1e1e30' : 'white' }}>
+                          {s.lines.map((l, li) => (
+                            <div key={li} style={{ fontSize: 9, color: text3, lineHeight: 1.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l}</div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{ flexShrink: 0, width: 80, borderRadius: 8, border: `1.5px dashed ${borderClr}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer' }}>
+                      <span style={{ fontSize: 18, color: text3 }}>+</span>
+                      <span style={{ fontSize: 9, color: text3, textAlign: 'center', lineHeight: 1.3 }}>19 more</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Notes — collapsible ── */}
+                <div style={{ borderRadius: 12, border: `1px solid ${borderClr}`, overflow: 'hidden', background: cardBg }}>
+                  {/* Header / toggle */}
+                  <button
+                    onClick={() => setNotesExpanded(n => !n)}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    <div style={{ color: P }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: text1 }}>Notes</div>
+                      <div style={{ fontSize: 11, color: text3, marginTop: 1 }}>PDF · 4 pages · by content team</div>
+                    </div>
+                    <button onClick={e => { e.stopPropagation(); handleSaveResource('notes') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill={isNotesSaved ? P : 'none'} stroke={isNotesSaved ? P : text3} strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                    </button>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={text3} strokeWidth="2.2" strokeLinecap="round" style={{ flexShrink: 0, transition: 'transform 0.2s', transform: notesExpanded ? 'rotate(180deg)' : 'rotate(0deg)', marginLeft: 2 }}>
+                      <polyline points="6,9 12,15 18,9"/>
+                    </svg>
+                  </button>
+                  {/* Expanded content */}
+                  {notesExpanded && (
+                    <div style={{ padding: '0 14px 14px', borderTop: `1px solid ${borderClr}` }}>
+                      {DUMMY_NOTES.map((note, ni) => (
+                        <div key={ni} style={{ display: 'flex', gap: 10, padding: '10px 0', borderBottom: ni < DUMMY_NOTES.length - 1 ? `1px dashed ${borderClr}` : 'none' }}>
+                          <div style={{ width: 18, height: 18, borderRadius: '50%', background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                            <span style={{ fontSize: 9, fontWeight: 700, color: P }}>{ni + 1}</span>
+                          </div>
+                          <p style={{ fontSize: 12, color: text2, lineHeight: 1.65, margin: 0 }}>{note}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )
+          })()}
 
           {activeTab === 'selfnotes' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -2006,7 +2080,7 @@ export default function VideoPlayer({
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, borderBottom: `1px solid ${BD}`, marginBottom: 16 }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 2 }}>Subtitles</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 2 }}>Captions</div>
                 <div style={{ fontSize: 11, color: T3 }}>{subtitlesOn ? 'On' : 'Off'} · {language === 'EN' ? 'English' : 'Hinglish'}</div>
               </div>
               <Toggle value={subtitlesOn} onChange={setSubtitlesOn} />
