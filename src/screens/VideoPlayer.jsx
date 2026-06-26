@@ -876,6 +876,18 @@ export default function VideoPlayer({
           </button>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <button
+              onClick={e => { e.stopPropagation(); setLanguage(l => l === 'EN' ? 'HI' : 'EN') }}
+              style={{
+                background: 'rgba(0,0,0,0.35)', border: '1.5px solid rgba(255,255,255,0.4)',
+                borderRadius: 12, padding: '4px 9px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: 700,
+                letterSpacing: '0.04em', lineHeight: 1,
+              }}
+            >
+              {language}
+            </button>
+            <button
               onClick={e => { e.stopPropagation(); setIsPlaying(false); setShowDoubtPopup(true) }}
               style={{
                 background: 'rgba(0,0,0,0.35)', border: '1.5px solid rgba(255,255,255,0.4)',
